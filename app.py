@@ -11,7 +11,8 @@ app = Flask(__name__)
 BASE_DIR = os.path.expanduser("~/SatDump/build/elektro_l3_output")
 IMAGE_DIR = os.path.join(BASE_DIR, "images")
 TUNNEL_LOG = os.path.expanduser("~/mission_control/tunnel.log")
-ADMIN_PIN = "9494" # Security PIN
+ADMIN_PIN = "9494" # PIN Code
+
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # Electro-L Schedule
@@ -80,18 +81,23 @@ def get_data():
 
 @app.route('/api/files')
 def get_files():
+    # Only returns list if directory exists
     if not os.path.exists(IMAGE_DIR): return jsonify([])
     files = []
-    for f in os.listdir(IMAGE_DIR):
-        if f.endswith(('.png', '.jpg', '.jpeg')):
-            path = os.path.join(IMAGE_DIR, f)
-            stat = os.stat(path)
-            files.append({
-                "name": f,
-                "ts": stat.st_mtime,
-                "size_mb": round(stat.st_size / (1024*1024), 2)
-            })
-    return jsonify(sorted(files, key=lambda x: x['ts'], reverse=True))
+    try:
+        # Limit to 1000 newest files to prevent lag on huge folders
+        all_files = sorted(os.listdir(IMAGE_DIR), key=lambda x: os.path.getmtime(os.path.join(IMAGE_DIR, x)), reverse=True)[:1000]
+        for f in all_files:
+            if f.endswith(('.png', '.jpg', '.jpeg')):
+                path = os.path.join(IMAGE_DIR, f)
+                stat = os.stat(path)
+                files.append({
+                    "name": f,
+                    "ts": stat.st_mtime,
+                    "size_mb": round(stat.st_size / (1024*1024), 2)
+                })
+    except: pass
+    return jsonify(files)
 
 @app.route('/api/control', methods=['POST'])
 def control():
@@ -101,6 +107,8 @@ def control():
         return jsonify({"status": "error", "message": "Bad PIN"}), 403
 
     action = data.get('action')
+    target = data.get('target')
+
     if action == "start_capture":
         cmd = f"tmux new-session -d -s capture 'satdump live elektro_hrit {BASE_DIR} --source rtlsdr --frequency 1691000000 --samplerate 2048000 --gain 45 --bias'"
         subprocess.Popen(cmd, shell=True)
@@ -110,7 +118,7 @@ def control():
         cmd = f"tmux new-session -d -s sat-sync 'while true; do rclone sync {IMAGE_DIR} iclouddrive:SatImages -P; sleep 300; done'"
         subprocess.Popen(cmd, shell=True)
     elif action == "stop":
-        subprocess.Popen(f"tmux kill-session -t {data.get('target')}", shell=True)
+        subprocess.Popen(f"tmux kill-session -t {target}", shell=True)
     elif action == "delete":
         path = os.path.join(IMAGE_DIR, data.get('filename'))
         if os.path.exists(path): os.remove(path)

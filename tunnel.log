@@ -18,3 +18,25 @@
 {"level":"info","time":"2026-02-14T17:56:43Z","message":"Starting metrics server on 127.0.0.1:20241/metrics"}
 {"level":"info","event":0,"ip":"198.41.200.13","connIndex":0,"time":"2026-02-14T17:56:43Z","message":"Tunnel connection curve preferences: [X25519MLKEM768 CurveP256]"}
 {"level":"info","event":0,"connection":"ecd5b166-0475-4e37-9a96-6fe80e863a29","connIndex":0,"location":"sin15","ip":"198.41.200.13","protocol":"quic","time":"2026-02-14T17:56:44Z","message":"Registered tunnel connection"}
+{"level":"info","time":"2026-02-14T18:59:34Z","message":"Thank you for trying Cloudflare Tunnel. Doing so, without a Cloudflare account, is a quick way to experiment and try it out. However, be aware that these account-less Tunnels have no uptime guarantee, are subject to the Cloudflare Online Services Terms of Use (https://www.cloudflare.com/website-terms/), and Cloudflare reserves the right to investigate your use of Tunnels for violations of such terms. If you intend to use Tunnels in production you should use a pre-created named tunnel by following: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps"}
+{"level":"info","time":"2026-02-14T18:59:34Z","message":"Requesting new quick Tunnel on trycloudflare.com..."}
+{"level":"info","time":"2026-02-14T18:59:45Z","message":"Thank you for trying Cloudflare Tunnel. Doing so, without a Cloudflare account, is a quick way to experiment and try it out. However, be aware that these account-less Tunnels have no uptime guarantee, are subject to the Cloudflare Online Services Terms of Use (https://www.cloudflare.com/website-terms/), and Cloudflare reserves the right to investigate your use of Tunnels for violations of such terms. If you intend to use Tunnels in production you should use a pre-created named tunnel by following: https://developers.cloudflare.com/cloudflare-one/connections/connect-apps"}
+{"level":"info","time":"2026-02-14T18:59:45Z","message":"Requesting new quick Tunnel on trycloudflare.com..."}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"+--------------------------------------------------------------------------------------------+"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"|  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable):  |"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"|  https://updates-institutional-efficiency-bow.trycloudflare.com                            |"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"+--------------------------------------------------------------------------------------------+"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"Cannot determine default configuration path. No file [config.yml config.yaml] in [~/.cloudflared ~/.cloudflare-warp ~/cloudflare-warp /etc/cloudflared /usr/local/etc/cloudflared]"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"Version 2026.2.0 (Checksum 03c5d58e283f521d752dc4436014eb341092edf076eb1095953ab82debe54a8e)"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"GOOS: linux, GOVersion: go1.24.13, GoArch: arm64"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"Settings: map[ha-connections:1 logfile:/home/ethan/mission_control/tunnel.log protocol:quic url:http://localhost:5000]"}
+{"level":"info","autoupdateFreq":86400000,"time":"2026-02-14T18:59:50Z","message":"Autoupdate frequency is set"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"Generated Connector ID: c9f194a1-f144-4f6c-9147-eae8e3e3e4a9"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"Initial protocol quic"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"ICMP proxy will use 192.168.50.9 as source for IPv4"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"ICMP proxy will use fe80::8aa2:9eff:fe31:10fc in zone eth0 as source for IPv6"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"ICMP proxy will use 192.168.50.9 as source for IPv4"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"ICMP proxy will use fe80::8aa2:9eff:fe31:10fc in zone eth0 as source for IPv6"}
+{"level":"info","time":"2026-02-14T18:59:50Z","message":"Starting metrics server on 127.0.0.1:20241/metrics"}
+{"level":"info","event":0,"ip":"198.41.200.23","connIndex":0,"time":"2026-02-14T18:59:50Z","message":"Tunnel connection curve preferences: [X25519MLKEM768 CurveP256]"}
+{"level":"info","event":0,"connection":"6cb2f061-4b64-4234-9f67-ba7f2e870408","connIndex":0,"location":"sin13","ip":"198.41.200.23","protocol":"quic","time":"2026-02-14T18:59:51Z","message":"Registered tunnel connection"}
