@@ -7,17 +7,13 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 
 app = Flask(__name__)
 
-# --- CONFIGURATION ---
+# --- CONFIG ---
 BASE_DIR = os.path.expanduser("~/SatDump/build/elektro_l3_output")
 IMAGE_DIR = os.path.join(BASE_DIR, "images")
 TUNNEL_LOG = os.path.expanduser("~/mission_control/tunnel.log")
-
-# SECURITY: The PIN required to Start/Stop tasks or Delete files.
-ADMIN_PIN = "1342" 
-
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
-# Electro-L Schedule
+# Electro-L Schedule (UTC+4/GST)
 SCHEDULE_WINDOWS = [1, 4, 7, 10, 13, 16, 19, 22]
 TX_MINUTE = 42
 
@@ -33,9 +29,10 @@ def get_next_pass():
                 mins = int((diff.total_seconds() % 3600) // 60)
                 return {
                     "absolute": target.strftime("%H:%M"),
-                    "relative": f"{hrs}h {mins}m"
+                    "relative": f"{hrs}h {mins}m",
+                    "timestamp": target.timestamp()
                 }
-    return {"absolute": "--:--", "relative": "--"}
+    return {"absolute": "--:--", "relative": "--", "timestamp": 0}
 
 def get_tunnel_url():
     if not os.path.exists(TUNNEL_LOG): return "Tunnel Offline"
@@ -51,12 +48,14 @@ def index(): return render_template('index.html')
 
 @app.route('/api/data')
 def get_data():
+    # 1. System Stats
     try:
         with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
             temp = round(int(f.read()) / 1000, 1)
     except: temp = 0
     total, used, free = shutil.disk_usage("/")
     
+    # 2. Tasks
     def check(name):
         try:
             return subprocess.run(["tmux", "has-session", "-t", name], 
@@ -81,6 +80,18 @@ def get_data():
         }
     })
 
+@app.route('/api/logs/<session>')
+def get_logs(session):
+    try:
+        # Check if session exists first
+        check = subprocess.run(["tmux", "has-session", "-t", session], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if check.returncode != 0:
+            return jsonify({"log": "SESSION OFFLINE (Task is not running)"})
+            
+        res = subprocess.check_output(["tmux", "capture-pane", "-pt", session, "-S", "-50"])
+        return jsonify({"log": res.decode('utf-8', errors='ignore')})
+    except Exception as e: return jsonify({"log": str(e)})
+
 @app.route('/api/files')
 def get_files():
     if not os.path.exists(IMAGE_DIR): return jsonify([])
@@ -99,10 +110,6 @@ def get_files():
 @app.route('/api/control', methods=['POST'])
 def control():
     data = request.json
-    # SECURITY CHECK
-    if str(data.get('pin')) != ADMIN_PIN:
-        return jsonify({"status": "error", "message": "Incorrect PIN"}), 403
-
     action = data.get('action')
     if action == "start_capture":
         cmd = f"tmux new-session -d -s capture 'satdump live elektro_hrit {BASE_DIR} --source rtlsdr --frequency 1691000000 --samplerate 2048000 --gain 45 --bias'"
@@ -119,15 +126,6 @@ def control():
         if os.path.exists(path): os.remove(path)
         
     return jsonify({"status": "ok"})
-
-@app.route('/api/logs/<session>')
-def get_logs(session):
-    try:
-        check = subprocess.run(["tmux", "has-session", "-t", session], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if check.returncode != 0: return jsonify({"log": "OFFLINE"})
-        res = subprocess.check_output(["tmux", "capture-pane", "-pt", session, "-S", "-50"])
-        return jsonify({"log": res.decode('utf-8', errors='ignore')})
-    except: return jsonify({"log": "Error reading logs"})
 
 @app.route('/images/<path:filename>')
 def serve_image(filename): return send_from_directory(IMAGE_DIR, filename)
