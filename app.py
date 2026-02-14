@@ -11,6 +11,7 @@ app = Flask(__name__)
 BASE_DIR = os.path.expanduser("~/SatDump/build/elektro_l3_output")
 IMAGE_DIR = os.path.join(BASE_DIR, "images")
 TUNNEL_LOG = os.path.expanduser("~/mission_control/tunnel.log")
+ADMIN_PIN = "9494" # Security PIN
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # Electro-L Schedule
@@ -95,6 +96,10 @@ def get_files():
 @app.route('/api/control', methods=['POST'])
 def control():
     data = request.json
+    # PIN CHECK
+    if str(data.get('pin')) != ADMIN_PIN:
+        return jsonify({"status": "error", "message": "Bad PIN"}), 403
+
     action = data.get('action')
     if action == "start_capture":
         cmd = f"tmux new-session -d -s capture 'satdump live elektro_hrit {BASE_DIR} --source rtlsdr --frequency 1691000000 --samplerate 2048000 --gain 45 --bias'"
