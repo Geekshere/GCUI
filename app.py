@@ -3,6 +3,10 @@ import subprocess
 import shutil
 import datetime
 import re
+import smtplib
+import threading
+import time
+from email.mime.text import MIMEText
 from flask import Flask, render_template, jsonify, request, send_from_directory
 
 app = Flask(__name__)
@@ -10,14 +14,62 @@ app = Flask(__name__)
 # --- CONFIG ---
 BASE_DIR = os.path.expanduser("~/SatDump/build/elektro_l3_output")
 IMAGE_DIR = os.path.join(BASE_DIR, "images")
-# Hardcoded path to ensure systemd finds it correctly
-TUNNEL_LOG = "/home/ethan/mission_control/tunnel.log" 
+TUNNEL_LOG = "/home/ethan/mission_control/tunnel.log"
+LAST_LINK_FILE = "/home/ethan/mission_control/last_link.txt"
+RECIPIENT_FILE = "/home/ethan/mission_control/recipient.txt"
 ADMIN_PIN = "9494"
+
+# ICLOUD CONFIG
+ICLOUD_USER = "ethangotz@icloud.com"
+ICLOUD_PASS = "ctaf-ktli-ilth-ewvg"
 
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # Electro-L Schedule
 TRANSMISSION_MINUTES = [12, 42]
+
+# --- EMAIL LOGIC ---
+def send_link_email(new_url):
+    try:
+        recipient = ""
+        if os.path.exists(RECIPIENT_FILE):
+            with open(RECIPIENT_FILE, 'r') as f: recipient = f.read().strip()
+        
+        if not recipient: return
+
+        msg = MIMEText(f"Mission Control Online.\n\nNew Link: {new_url}")
+        msg['Subject'] = "Mission Control: Link Update"
+        msg['From'] = ICLOUD_USER
+        msg['To'] = recipient
+
+        with smtplib.SMTP("smtp.mail.me.com", 587) as server:
+            server.starttls()
+            server.login(ICLOUD_USER, ICLOUD_PASS)
+            server.sendmail(ICLOUD_USER, recipient, msg.as_string())
+    except: pass
+
+def tunnel_monitor():
+    while True:
+        try:
+            if os.path.exists(TUNNEL_LOG):
+                with open(TUNNEL_LOG, 'r') as f:
+                    matches = re.findall(r'https://[\w-]+\.trycloudflare\.com', f.read())
+                    if matches:
+                        current_url = matches[-1]
+                        last_url = ""
+                        if os.path.exists(LAST_LINK_FILE):
+                            with open(LAST_LINK_FILE, 'r') as lf: last_url = lf.read().strip()
+                        
+                        if current_url != last_url:
+                            send_link_email(current_url)
+                            with open(LAST_LINK_FILE, 'w') as lf: lf.write(current_url)
+        except: pass
+        time.sleep(60)
+
+# Start Monitor
+threading.Thread(target=tunnel_monitor, daemon=True).start()
+
+# --- ROUTES ---
 
 def get_next_pass():
     now = datetime.datetime.now()
@@ -33,19 +85,17 @@ def get_next_pass():
                     return {
                         "absolute": target.strftime("%H:%M"),
                         "relative": f"{hrs}h {mins}m",
-                        "is_active": hrs == 0 and mins < 2 # Signal 'Active' if < 2 mins away
+                        "is_active": hrs == 0 and mins < 2
                     }
     return {"absolute": "--:--", "relative": "--", "is_active": False}
 
 def get_tunnel_url():
-    if not os.path.exists(TUNNEL_LOG): return "Log Missing"
+    if not os.path.exists(TUNNEL_LOG): return "Searching..."
     try:
         with open(TUNNEL_LOG, 'r') as f:
-            content = f.read()
-            # Find ALL matches and take the LAST one (most recent)
-            matches = re.findall(r'https://[\w-]+\.trycloudflare\.com', content)
+            matches = re.findall(r'https://[\w-]+\.trycloudflare\.com', f.read())
             return matches[-1] if matches else "Searching..."
-    except: return "Read Error"
+    except: return "Log Error"
 
 @app.route('/')
 def index(): return render_template('index.html')
@@ -57,6 +107,10 @@ def get_data():
             temp = round(int(f.read()) / 1000, 1)
     except: temp = 0
     total, used, free = shutil.disk_usage("/")
+    
+    recipient = ""
+    if os.path.exists(RECIPIENT_FILE):
+        with open(RECIPIENT_FILE, 'r') as f: recipient = f.read().strip()
     
     def check(name):
         try:
@@ -72,7 +126,8 @@ def get_data():
                 "used_gb": round(used / (2**30), 1),
                 "total_gb": round(total / (2**30), 1)
             },
-            "tunnel_url": get_tunnel_url()
+            "tunnel_url": get_tunnel_url(),
+            "recipient": recipient
         },
         "next_pass": get_next_pass(),
         "tasks": {
@@ -99,6 +154,12 @@ def get_files():
                 })
     except: pass
     return jsonify(files)
+
+@app.route('/api/settings', methods=['POST'])
+def save_settings():
+    email = request.json.get('email')
+    with open(RECIPIENT_FILE, 'w') as f: f.write(email)
+    return jsonify({"status": "ok"})
 
 @app.route('/api/control', methods=['POST'])
 def control():

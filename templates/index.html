@@ -204,6 +204,16 @@
                 <div class="copy-btn" onclick="copyLink()">📋</div>
             </div>
         </div>
+
+        <div class="setting-group">
+            <span class="setting-label">Notification Email</span>
+            <div class="copy-box">
+                <input type="email" class="copy-input" id="recipient-input" placeholder="Enter email address...">
+                <div class="copy-btn" onclick="saveEmail()">💾</div>
+            </div>
+            <div style="font-size:0.7rem; color:var(--sub); margin-top:5px;">We will email you the new link whenever it changes.</div>
+        </div>
+
     </div>
 </div>
 
@@ -243,15 +253,14 @@
         const res = await fetch('/api/data'); const data = await res.json();
         const next = data.next_pass;
         
-        // Pass Logic
         if(!settings.use24h && next.absolute !== "--:--") {
             let [h, m] = next.absolute.split(':');
             let ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
             document.getElementById('pass-abs').innerText = `at ${h}:${m} ${ampm}`;
         } else { document.getElementById('pass-abs').innerText = "at " + next.absolute; }
+        
         document.getElementById('pass-rel').innerText = next.relative;
 
-        // STATUS COLOR LOGIC
         const statusEl = document.getElementById('acq-status');
         if(next.is_active) {
             statusEl.innerText = "Receiving Signal";
@@ -269,7 +278,19 @@
         document.getElementById('temp').innerText = t.toFixed(1) + (settings.useF ? "°F" : "°C");
 
         document.getElementById('tunnel-input').value = data.system.tunnel_url;
+        document.getElementById('recipient-input').value = data.system.recipient || "";
+        
         setTask('align', data.tasks.align); setTask('capture', data.tasks.capture); setTask('sync', data.tasks.sync);
+    }
+
+    async function saveEmail() {
+        const email = document.getElementById('recipient-input').value;
+        await fetch('/api/settings', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({email: email})
+        });
+        alert("Recipient Saved!");
     }
 
     function setTask(name, active) {
@@ -339,7 +360,7 @@
             for(let i=0; i<7; i++) {
                 const day = new Date(start); day.setDate(start.getDate() + i);
                 const col = document.createElement('div'); col.className = 'week-col';
-                col.onclick = () => jumpToDay(day.getTime()); // CLICKABLE BUBBLE
+                col.onclick = () => jumpToDay(day.getTime()); 
                 col.style.cursor = 'pointer';
                 col.innerHTML = `<div class="week-head">${day.toLocaleDateString('default', {weekday:'short'})} ${day.getDate()}</div>`;
                 getFilesForRange(day, day).forEach(f => {
