@@ -3,285 +3,289 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elektro-L Ground Station</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <title>Dubai Ground Station</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0f172a; --card: rgba(30, 41, 59, 0.7); --border: rgba(255,255,255,0.1);
-            --text: #f1f5f9; --text-dim: #94a3b8;
-            --accent: #3b82f6; --success: #10b981; --danger: #ef4444;
+            --bg: #000000; --card: #1c1c1e; --text: #ffffff; --sub: #8e8e93;
+            --accent: #0a84ff; --success: #30d158; --danger: #ff453a; --border: #38383a;
         }
-        * { box-sizing: border-box; }
-        body {
-            margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
-            overflow-x: hidden; min-height: 100vh;
-        }
-        
-        /* PARALLAX BACKGROUND */
-        #grid-bg {
-            position: fixed; top: -5%; left: -5%; width: 110%; height: 110%;
-            background-image: radial-gradient(var(--border) 1px, transparent 1px);
-            background-size: 40px 40px; z-index: -1; opacity: 0.3;
-            transition: transform 0.1s ease-out;
-        }
+        body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
 
-        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-        
         /* HEADER */
-        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 30px; }
-        h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
-        .badge { background: var(--accent); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        h1 { font-size: 1.8rem; font-weight: 700; margin: 0; letter-spacing: -0.5px; }
+        .clock { font-family: 'JetBrains Mono'; font-size: 1.2rem; color: var(--sub); }
+        .gear-btn { font-size: 1.5rem; cursor: pointer; transition: transform 0.3s; }
+        .gear-btn:hover { transform: rotate(90deg); color: var(--accent); }
 
-        /* DASHBOARD GRID */
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-        
-        .card {
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 12px; padding: 20px; backdrop-filter: blur(10px);
-        }
-        .card-title { color: var(--text-dim); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.05em; }
+        /* CARDS */
+        .card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); }
+        .card-header { text-transform: uppercase; font-size: 0.75rem; color: var(--sub); font-weight: 600; margin-bottom: 15px; letter-spacing: 1px; }
 
         /* METRICS */
-        .stat-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-        .big-stat { font-size: 2rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
-        .sub-stat { color: var(--text-dim); font-size: 0.9rem; }
+        .metrics-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+        .metric { display: flex; flex-direction: column; }
+        .metric-val { font-size: 2rem; font-weight: 600; font-family: 'JetBrains Mono'; }
+        .metric-label { font-size: 0.9rem; color: var(--sub); margin-top: 5px; }
 
-        /* SCHEDULE LIST */
-        .schedule-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
-        .schedule-item:last-child { border: none; }
-        .time-badge { font-family: 'JetBrains Mono', monospace; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px; }
-
-        /* CONTROLS */
-        .control-group { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #475569; display: inline-block; margin-right: 8px; }
-        .status-dot.active { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        /* TASKS */
+        .task-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
+        .task-item:last-child { border: none; }
+        .task-name { font-weight: 500; display: flex; align-items: center; gap: 10px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #3a3a3c; }
+        .dot.active { background: var(--success); box-shadow: 0 0 8px var(--success); }
         
-        button {
-            background: transparent; border: 1px solid var(--border); color: var(--text);
-            padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-family: 'Inter', sans-serif;
-        }
-        button:hover { background: var(--accent); border-color: var(--accent); }
-        .btn-danger:hover { background: var(--danger); border-color: var(--danger); }
+        button { background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px 16px; border-radius: 18px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        button:hover { background: var(--accent); }
+        .btn-stop { background: rgba(255, 69, 58, 0.2); color: var(--danger); }
+        .btn-stop:hover { background: var(--danger); color: white; }
 
-        /* FILE TABLE */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
-        th { text-align: left; color: var(--text-dim); padding: 10px; border-bottom: 1px solid var(--border); }
-        td { padding: 10px; border-bottom: 1px solid var(--border); }
-        tr:hover { background: rgba(255,255,255,0.02); }
-        .action-links a { color: var(--accent); text-decoration: none; margin-right: 10px; cursor: pointer; }
-        .action-links span { color: var(--danger); cursor: pointer; }
+        /* APPLE CALENDAR STYLE */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .month-label { font-size: 1.2rem; font-weight: 600; }
+        .cal-nav { display: flex; gap: 10px; }
+        
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
+        .cal-head { font-size: 0.8rem; color: var(--sub); padding-bottom: 10px; font-weight: 600; }
+        .cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; position: relative; font-size: 0.9rem; }
+        .cal-day:hover { background: #3a3a3c; }
+        .cal-day.today { background: var(--accent); color: white; }
+        .cal-day.has-data::after { content: ''; width: 4px; height: 4px; background: var(--sub); border-radius: 50%; margin-top: 2px; }
+        .cal-day.today.has-data::after { background: white; }
 
-        /* GALLERY & MODAL */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; }
-        .modal img { max-width: 95%; max-height: 85vh; border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
-        .modal-controls { position: absolute; bottom: 20px; display: flex; gap: 20px; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 30px; backdrop-filter: blur(5px); }
-        .player-bar { width: 100%; height: 4px; background: #333; margin-top: 10px; position: relative; }
-        .player-progress { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s linear; }
-
+        /* MODAL */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; justify-content: center; align-items: center; }
+        .modal-box { background: var(--card); padding: 30px; border-radius: 16px; width: 90%; max-width: 500px; border: 1px solid var(--border); }
+        .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
+        .setting-val { font-family: 'JetBrains Mono'; color: var(--accent); }
+        
+        .link-box { background: black; padding: 10px; border-radius: 8px; font-family: 'JetBrains Mono'; font-size: 0.8rem; word-break: break-all; margin-top: 10px; color: var(--accent); border: 1px solid var(--border); }
     </style>
 </head>
 <body>
-    <div id="grid-bg"></div>
 
-    <div class="container">
-        <header>
-            <div>
-                <h1>Mission Control</h1>
-                <div style="color: var(--text-dim); font-size: 0.9rem; margin-top:5px;">Dubai Ground Station // 76°E</div>
-            </div>
-            <div class="badge" id="clock">00:00:00</div>
-        </header>
-
-        <div class="grid">
-            <div class="card">
-                <div class="card-title">System Vitals</div>
-                <div class="stat-row">
-                    <div>
-                        <div class="sub-stat">CPU Temp</div>
-                        <div class="big-stat" id="cpu-temp">--°</div>
-                    </div>
-                    <div style="text-align: right">
-                        <div class="sub-stat">Storage</div>
-                        <div class="big-stat" id="disk-percent">--%</div>
-                    </div>
-                </div>
-                <div class="sub-stat" style="text-align: right" id="disk-detail">-- / --</div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">Acquisition Schedule (GST)</div>
-                <div id="schedule-list">Loading...</div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">Active Tasks</div>
-                <div class="control-group">
-                    <div><span class="status-dot" id="dot-align"></span> Alignment (1693 MHz)</div>
-                    <button id="btn-align" onclick="toggleTask('align')">Start</button>
-                </div>
-                <div class="control-group">
-                    <div><span class="status-dot" id="dot-capture"></span> HRIT Capture (1691 MHz)</div>
-                    <button id="btn-capture" onclick="toggleTask('capture')">Start</button>
-                </div>
-                <div class="control-group">
-                    <div><span class="status-dot" id="dot-sync"></span> Cloud Sync</div>
-                    <button id="btn-sync" onclick="toggleTask('sync')">Start</button>
-                </div>
-            </div>
+<div class="container">
+    <header>
+        <div>
+            <h1>Ground Station</h1>
+            <div style="color: var(--sub);">Electro-L5 // 76°E</div>
         </div>
+        <div style="display:flex; gap: 15px; align-items: center;">
+            <div class="clock" id="clock">--:--</div>
+            <div class="gear-btn" onclick="openModal('settings')">⚙️</div>
+        </div>
+    </header>
 
-        <div class="card" style="margin-top: 20px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div class="card-title" style="margin-bottom:0">Data Library</div>
-                <button onclick="playTimelapse()">▶ Play Timelapse</button>
+    <div class="card">
+        <div class="card-header">Vitals & Orbit</div>
+        <div class="metrics-row">
+            <div class="metric">
+                <span class="metric-val" id="next-pass-display">--:--</span>
+                <span class="metric-label" id="next-pass-countdown">Calculating...</span>
             </div>
-            <table>
-                <thead>
-                    <tr><th>Filename</th><th>Date</th><th>Size</th><th>Actions</th></tr>
-                </thead>
-                <tbody id="file-table"></tbody>
-            </table>
+            <div class="metric">
+                <span class="metric-val" id="temp-display">--°</span>
+                <span class="metric-label">Core Temperature</span>
+            </div>
         </div>
     </div>
 
-    <div class="modal" id="gallery-modal">
-        <img id="modal-img" src="">
-        <div class="modal-controls">
-            <button onclick="changeSlide(-1)">← Prev</button>
-            <span id="slide-counter" style="align-self:center; font-family:'JetBrains Mono'">0/0</span>
-            <button onclick="changeSlide(1)">Next →</button>
-            <button onclick="closeModal()">Close</button>
-        </div>
-    </div>
-
-    <script>
-        // PARALLAX BACKGROUND
-        document.addEventListener('mousemove', (e) => {
-            const x = (e.clientX / window.innerWidth) * 20;
-            const y = (e.clientY / window.innerHeight) * 20;
-            document.getElementById('grid-bg').style.transform = `translate(-${x}px, -${y}px)`;
-        });
-
-        // CLOCK
-        setInterval(() => {
-            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
-        }, 1000);
-
-        let files = [];
-        let slideIndex = 0;
-        let playInterval;
-
-        async function refresh() {
-            try {
-                // DASHBOARD DATA
-                const res = await fetch('/api/dashboard');
-                const data = await res.json();
-                
-                document.getElementById('cpu-temp').innerText = data.stats.cpu + "°";
-                document.getElementById('disk-percent').innerText = data.stats.disk_percent + "%";
-                document.getElementById('disk-detail').innerText = data.stats.disk_text;
-
-                // Update Tasks
-                updateBtn('align', data.tasks.align);
-                updateBtn('capture', data.tasks.capture);
-                updateBtn('sync', data.tasks.sync);
-
-                // Update Schedule
-                const schedList = document.getElementById('schedule-list');
-                schedList.innerHTML = data.schedule.map(s => `
-                    <div class="schedule-item">
-                        <span class="time-badge">${s.time_str}</span>
-                        <span style="color:var(--accent)">T-Minus ${s.countdown}</span>
-                    </div>
-                `).join('');
-
-                // FILES
-                const fRes = await fetch('/api/files');
-                files = await fRes.json();
-                const table = document.getElementById('file-table');
-                table.innerHTML = files.map(f => `
-                    <tr>
-                        <td style="font-family:'JetBrains Mono'">${f.name}</td>
-                        <td>${f.date}</td>
-                        <td>${f.size}</td>
-                        <td class="action-links">
-                            <a href="#" onclick="viewImage('${f.name}')">View</a>
-                            <a href="/images/${f.name}" download>Download</a>
-                            <span onclick="deleteFile('${f.name}')" class="btn-danger">Delete</span>
-                        </td>
-                    </tr>
-                `).join('');
-
-            } catch(e) { console.log(e); }
-        }
-
-        function updateBtn(task, active) {
-            const dot = document.getElementById(`dot-${task}`);
-            const btn = document.getElementById(`btn-${task}`);
-            dot.className = active ? "status-dot active" : "status-dot";
-            btn.innerText = active ? "Stop" : "Start";
-            btn.className = active ? "btn-danger" : "";
-            btn.onclick = () => sendControl(active ? "stop" : `start_${task}`, task);
-        }
-
-        async function sendControl(action, target) {
-            await fetch('/api/control', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({action, target: target === 'sync' ? 'sat-sync' : (target === 'align' ? 'alignment' : 'capture')})
-            });
-            setTimeout(refresh, 500);
-        }
-
-        async function deleteFile(name) {
-            if(!confirm("Delete " + name + "?")) return;
-            await fetch('/api/delete', {
-                method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({filename: name})
-            });
-            refresh();
-        }
-
-        // GALLERY FUNCTIONS
-        function viewImage(name) {
-            slideIndex = files.findIndex(f => f.name === name);
-            showSlide();
-            document.getElementById('gallery-modal').style.display = 'flex';
-        }
+    <div class="card">
+        <div class="card-header">Active Processes</div>
         
-        function showSlide() {
-            if(slideIndex >= files.length) slideIndex = 0;
-            if(slideIndex < 0) slideIndex = files.length - 1;
-            const f = files[slideIndex];
-            document.getElementById('modal-img').src = `/images/${f.name}`;
-            document.getElementById('slide-counter').innerText = `${slideIndex + 1}/${files.length}`;
+        <div class="task-item">
+            <div class="task-name"><div class="dot" id="dot-align"></div> RTL-TCP (Alignment)</div>
+            <button id="btn-align" onclick="toggleTask('align')">Start</button>
+        </div>
+
+        <div class="task-item">
+            <div class="task-name"><div class="dot" id="dot-capture"></div> SatDump (HRIT Capture)</div>
+            <button id="btn-capture" onclick="toggleTask('capture')">Start</button>
+        </div>
+
+        <div class="task-item">
+            <div class="task-name"><div class="dot" id="dot-sync"></div> iCloud Sync (Rclone)</div>
+            <button id="btn-sync" onclick="toggleTask('sync')">Start</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="calendar-header">
+            <span class="month-label" id="cal-month-year">February 2026</span>
+            <div class="cal-nav">
+                <button onclick="changeMonth(-1)">←</button>
+                <button onclick="changeMonth(1)">→</button>
+            </div>
+        </div>
+        <div class="cal-grid" id="calendar-grid">
+            </div>
+    </div>
+</div>
+
+<div class="modal" id="settings-modal" onclick="if(event.target==this) closeModal('settings')">
+    <div class="modal-box">
+        <h2 style="margin-top:0">Settings</h2>
+        
+        <div class="setting-row">
+            <span>Time Format</span>
+            <button onclick="toggleSetting('use24h')"><span id="set-time-fmt">24h</span></button>
+        </div>
+        
+        <div class="setting-row">
+            <span>Temperature Unit</span>
+            <button onclick="toggleSetting('useFahrenheit')"><span id="set-temp-unit">°C</span></button>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <div class="card-header">Secure Share Link</div>
+            <div class="link-box" id="tunnel-link">Loading...</div>
+            <div style="font-size:0.8rem; color:var(--sub); margin-top:5px">Share this link to access remotely.</div>
+        </div>
+
+        <button style="width:100%; margin-top:20px; background:white; color:black" onclick="closeModal('settings')">Done</button>
+    </div>
+</div>
+
+<script>
+    // --- STATE & SETTINGS ---
+    let settings = {
+        use24h: localStorage.getItem('use24h') === 'true',
+        useFahrenheit: localStorage.getItem('useFahrenheit') === 'true'
+    };
+
+    let currentDate = new Date();
+    let dataDates = []; // Stores dates with images
+
+    // --- CORE LOOP ---
+    async function update() {
+        const res = await fetch('/api/data');
+        const data = await res.json();
+
+        // Pass Timer
+        const pass = data.next_pass;
+        document.getElementById('next-pass-display').innerText = settings.use24h ? pass.absolute : convertTo12h(pass.absolute);
+        document.getElementById('next-pass-countdown').innerText = `T-Minus ${pass.relative}`;
+
+        // Temp
+        let temp = data.system.temp;
+        if(settings.useFahrenheit) temp = (temp * 9/5) + 32;
+        document.getElementById('temp-display').innerText = Math.round(temp) + (settings.useFahrenheit ? "°F" : "°C");
+
+        // Tunnel
+        document.getElementById('tunnel-link').innerText = data.system.tunnel_url;
+
+        // Tasks
+        updateTaskBtn('align', data.tasks.align);
+        updateTaskBtn('capture', data.tasks.capture);
+        updateTaskBtn('sync', data.tasks.sync);
+    }
+
+    function updateTaskBtn(name, active) {
+        const dot = document.getElementById(`dot-${name}`);
+        const btn = document.getElementById(`btn-${name}`);
+        dot.className = active ? "dot active" : "dot";
+        btn.innerText = active ? "Stop" : "Start";
+        btn.className = active ? "btn-stop" : "";
+        btn.onclick = () => control(active ? "stop" : `start_${name}`, name);
+    }
+
+    async function control(action, target) {
+        await fetch('/api/control', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({action, target: target==='sync'?'sat-sync':(target==='align'?'alignment':'capture')})
+        });
+        setTimeout(update, 500);
+    }
+
+    // --- CALENDAR LOGIC ---
+    async function initCalendar() {
+        const res = await fetch('/api/calendar');
+        dataDates = await res.json();
+        renderCalendar();
+    }
+
+    function renderCalendar() {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        
+        document.getElementById('cal-month-year').innerText = 
+            new Date(year, month).toLocaleString('default', { month: 'long', year: 'numeric' });
+
+        const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        const grid = document.getElementById('calendar-grid');
+        grid.innerHTML = `
+            <div class="cal-head">SUN</div><div class="cal-head">MON</div><div class="cal-head">TUE</div>
+            <div class="cal-head">WED</div><div class="cal-head">THU</div><div class="cal-head">FRI</div><div class="cal-head">SAT</div>
+        `;
+
+        // Empty slots
+        for(let i=0; i<firstDay; i++) {
+            grid.innerHTML += `<div></div>`;
         }
 
-        function changeSlide(n) {
-            slideIndex += n;
-            showSlide();
-        }
+        // Days
+        const today = new Date();
+        for(let d=1; d<=daysInMonth; d++) {
+            let className = "cal-day";
+            let dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            
+            if(year === today.getFullYear() && month === today.getMonth() && d === today.getDate()) {
+                className += " today";
+            }
+            if(dataDates.includes(dateStr)) {
+                className += " has-data";
+            }
 
-        function closeModal() {
-            document.getElementById('gallery-modal').style.display = 'none';
-            clearInterval(playInterval);
+            grid.innerHTML += `<div class="${className}">${d}</div>`;
         }
+    }
 
-        function playTimelapse() {
-            if(files.length === 0) return alert("No images to play!");
-            slideIndex = files.length - 1; // Start from oldest
-            document.getElementById('gallery-modal').style.display = 'flex';
-            playInterval = setInterval(() => {
-                slideIndex--;
-                if(slideIndex < 0) {
-                    clearInterval(playInterval); // Stop at end
-                } else {
-                    showSlide();
-                }
-            }, 200); // 200ms per frame
-        }
+    function changeMonth(dir) {
+        currentDate.setMonth(currentDate.getMonth() + dir);
+        renderCalendar();
+    }
 
-        refresh();
-        setInterval(refresh, 5000); // Poll every 5s
-    </script>
+    // --- SETTINGS LOGIC ---
+    function openModal(id) { document.getElementById(id+'-modal').style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id+'-modal').style.display = 'none'; }
+
+    function toggleSetting(key) {
+        settings[key] = !settings[key];
+        localStorage.setItem(key, settings[key]);
+        renderSettingsUI();
+        update(); // Refresh data immediately
+    }
+
+    function renderSettingsUI() {
+        document.getElementById('set-time-fmt').innerText = settings.use24h ? "24h" : "12h";
+        document.getElementById('set-temp-unit').innerText = settings.useFahrenheit ? "°F" : "°C";
+    }
+
+    function convertTo12h(timeStr) {
+        if(timeStr === "--:--") return "--:--";
+        let [h, m] = timeStr.split(':');
+        h = parseInt(h);
+        const ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        h = h ? h : 12; 
+        return `${h}:${m} ${ampm}`;
+    }
+
+    // --- INIT ---
+    setInterval(() => {
+        const now = new Date();
+        let timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: !settings.use24h});
+        document.getElementById('clock').innerText = timeStr;
+    }, 1000);
+
+    renderSettingsUI();
+    initCalendar();
+    update();
+    setInterval(update, 5000);
+</script>
 </body>
 </html>
