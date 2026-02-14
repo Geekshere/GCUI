@@ -3,377 +3,285 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Elektro-L5 Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <title>Elektro-L Ground Station</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #0f172a;       /* Slate 900 */
-            --card: #1e293b;     /* Slate 800 */
-            --text: #f8fafc;     /* Slate 50 */
-            --accent: #3b82f6;   /* Blue 500 */
-            --success: #22c55e;  /* Green 500 */
-            --danger: #ef4444;   /* Red 500 */
-            --border: #334155;   /* Slate 700 */
+            --bg: #0f172a; --card: rgba(30, 41, 59, 0.7); --border: rgba(255,255,255,0.1);
+            --text: #f1f5f9; --text-dim: #94a3b8;
+            --accent: #3b82f6; --success: #10b981; --danger: #ef4444;
         }
+        * { box-sizing: border-box; }
         body {
-            margin: 0; font-family: 'Inter', sans-serif;
-            background-color: var(--bg); color: var(--text);
-            overflow-x: hidden;
+            margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text);
+            overflow-x: hidden; min-height: 100vh;
         }
-
-        /* --- INTERACTIVE BACKGROUND --- */
-        #bg-canvas {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1; opacity: 0.2; pointer-events: none;
-        }
-
-        /* --- LAYOUT --- */
-        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         
-        header {
-            display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 30px;
+        /* PARALLAX BACKGROUND */
+        #grid-bg {
+            position: fixed; top: -5%; left: -5%; width: 110%; height: 110%;
+            background-image: radial-gradient(var(--border) 1px, transparent 1px);
+            background-size: 40px 40px; z-index: -1; opacity: 0.3;
+            transition: transform 0.1s ease-out;
         }
-        h1 { margin: 0; font-weight: 600; font-size: 1.5rem; letter-spacing: -0.5px; }
-        .status-badge { font-size: 0.9rem; padding: 5px 10px; background: var(--card); border-radius: 20px; border: 1px solid var(--border); }
 
-        /* --- CARDS --- */
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        /* HEADER */
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 20px; border-bottom: 1px solid var(--border); margin-bottom: 30px; }
+        h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
+        .badge { background: var(--accent); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+
+        /* DASHBOARD GRID */
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         
         .card {
-            background: var(--card); border-radius: 12px; padding: 20px;
-            border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 20px; backdrop-filter: blur(10px);
         }
-        .card-header { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 15px; font-weight: 600; }
-        
-        /* --- METRICS --- */
-        .metric { font-size: 2.5rem; font-weight: 300; }
-        .metric-sub { font-size: 0.9rem; color: #94a3b8; }
+        .card-title { color: var(--text-dim); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 0.05em; }
 
-        /* --- CONTROL ROW --- */
-        .control-row {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 15px 0; border-bottom: 1px solid #334155;
-        }
-        .control-row:last-child { border-bottom: none; }
-        .status-dot { height: 10px; width: 10px; border-radius: 50%; background: #475569; display: inline-block; margin-right: 10px; }
-        .status-dot.active { background: var(--success); box-shadow: 0 0 10px var(--success); }
+        /* METRICS */
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .big-stat { font-size: 2rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+        .sub-stat { color: var(--text-dim); font-size: 0.9rem; }
+
+        /* SCHEDULE LIST */
+        .schedule-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
+        .schedule-item:last-child { border: none; }
+        .time-badge { font-family: 'JetBrains Mono', monospace; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px; }
+
+        /* CONTROLS */
+        .control-group { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #475569; display: inline-block; margin-right: 8px; }
+        .status-dot.active { background: var(--success); box-shadow: 0 0 8px var(--success); }
         
         button {
-            background: var(--card); border: 1px solid var(--border); color: var(--text);
-            padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-family: inherit;
+            background: transparent; border: 1px solid var(--border); color: var(--text);
+            padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-family: 'Inter', sans-serif;
         }
         button:hover { background: var(--accent); border-color: var(--accent); }
-        button.btn-stop { color: var(--danger); border-color: var(--danger); }
-        button.btn-stop:hover { background: var(--danger); color: white; }
+        .btn-danger:hover { background: var(--danger); border-color: var(--danger); }
 
-        /* --- GALLERY --- */
-        #latest-img-container {
-            width: 100%; height: 300px; background: #000; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center; overflow: hidden;
-            position: relative; cursor: pointer;
-        }
-        #latest-img-container img { max-width: 100%; max-height: 100%; transition: 0.3s; }
-        #latest-img-container:hover img { transform: scale(1.02); }
-        .gallery-controls { display: flex; gap: 10px; margin-top: 15px; }
+        /* FILE TABLE */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
+        th { text-align: left; color: var(--text-dim); padding: 10px; border-bottom: 1px solid var(--border); }
+        td { padding: 10px; border-bottom: 1px solid var(--border); }
+        tr:hover { background: rgba(255,255,255,0.02); }
+        .action-links a { color: var(--accent); text-decoration: none; margin-right: 10px; cursor: pointer; }
+        .action-links span { color: var(--danger); cursor: pointer; }
 
-        /* --- MODALS --- */
-        .modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); z-index: 100; backdrop-filter: blur(5px);
-            align-items: center; justify-content: center;
-        }
-        .modal-content {
-            background: var(--card); padding: 25px; border-radius: 12px; width: 90%; max-width: 800px;
-            max-height: 90vh; overflow-y: auto; border: 1px solid var(--border);
-        }
-        pre { background: #0f172a; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: monospace; color: #a5b4fc; }
+        /* GALLERY & MODAL */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; align-items: center; justify-content: center; }
+        .modal img { max-width: 95%; max-height: 85vh; border-radius: 8px; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        .modal-controls { position: absolute; bottom: 20px; display: flex; gap: 20px; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 30px; backdrop-filter: blur(5px); }
+        .player-bar { width: 100%; height: 4px; background: #333; margin-top: 10px; position: relative; }
+        .player-progress { height: 100%; background: var(--accent); width: 0%; transition: width 0.1s linear; }
 
-        /* FULL SCREEN IMAGE */
-        #img-modal-content { max-width: 95vw; max-height: 95vh; background: transparent; padding: 0; border: none; text-align: center; }
-        #full-image { max-width: 100%; max-height: 90vh; border-radius: 8px; }
-        
     </style>
 </head>
 <body>
-
-    <canvas id="bg-canvas"></canvas>
+    <div id="grid-bg"></div>
 
     <div class="container">
         <header>
             <div>
-                <h1>SatDump Control</h1>
-                <div style="color: #94a3b8; font-size: 0.9rem;">Electro-L5 Ground Station // Dubai</div>
+                <h1>Mission Control</h1>
+                <div style="color: var(--text-dim); font-size: 0.9rem; margin-top:5px;">Dubai Ground Station // 76°E</div>
             </div>
-            <div class="status-badge" id="clock">--:--:--</div>
+            <div class="badge" id="clock">00:00:00</div>
         </header>
 
         <div class="grid">
-            
             <div class="card">
-                <div class="card-header">System Health</div>
-                <div style="display: flex; gap: 30px;">
+                <div class="card-title">System Vitals</div>
+                <div class="stat-row">
                     <div>
-                        <div class="metric" id="cpu-temp">--°</div>
-                        <div class="metric-sub">CPU Temp</div>
+                        <div class="sub-stat">CPU Temp</div>
+                        <div class="big-stat" id="cpu-temp">--°</div>
                     </div>
-                    <div>
-                        <div class="metric" id="disk-percent">--%</div>
-                        <div class="metric-sub" id="disk-detail">Storage</div>
+                    <div style="text-align: right">
+                        <div class="sub-stat">Storage</div>
+                        <div class="big-stat" id="disk-percent">--%</div>
                     </div>
                 </div>
+                <div class="sub-stat" style="text-align: right" id="disk-detail">-- / --</div>
             </div>
 
             <div class="card">
-                <div class="card-header">Next Acquisition</div>
-                <div class="metric" id="countdown">--:--:--</div>
-                <div class="metric-sub">Target: 13:42 GST (1691.0 MHz)</div>
+                <div class="card-title">Acquisition Schedule (GST)</div>
+                <div id="schedule-list">Loading...</div>
             </div>
 
-            <div class="card" style="grid-column: span 2;">
-                <div class="card-header">Active Tasks</div>
-                
-                <div class="control-row">
-                    <div>
-                        <span class="status-dot" id="dot-align"></span> 
-                        <strong>Dish Alignment</strong> (RTL_TCP)
-                    </div>
-                    <div style="display:flex; gap:10px">
-                        <button onclick="viewLog('alignment')">Monitor</button>
-                        <button id="btn-align" onclick="toggleTask('align')">Start</button>
-                    </div>
+            <div class="card">
+                <div class="card-title">Active Tasks</div>
+                <div class="control-group">
+                    <div><span class="status-dot" id="dot-align"></span> Alignment (1693 MHz)</div>
+                    <button id="btn-align" onclick="toggleTask('align')">Start</button>
                 </div>
-
-                <div class="control-row">
-                    <div>
-                        <span class="status-dot" id="dot-capture"></span> 
-                        <strong>HRIT Capture</strong> (SatDump)
-                    </div>
-                    <div style="display:flex; gap:10px">
-                        <button onclick="viewLog('capture')">Monitor</button>
-                        <button id="btn-capture" onclick="toggleTask('capture')">Start</button>
-                    </div>
+                <div class="control-group">
+                    <div><span class="status-dot" id="dot-capture"></span> HRIT Capture (1691 MHz)</div>
+                    <button id="btn-capture" onclick="toggleTask('capture')">Start</button>
                 </div>
-
-                <div class="control-row">
-                    <div>
-                        <span class="status-dot" id="dot-sync"></span> 
-                        <strong>iCloud Sync</strong> (Rclone)
-                    </div>
-                    <div style="display:flex; gap:10px">
-                        <button onclick="viewLog('sat-sync')">Monitor</button>
-                        <button id="btn-sync" onclick="toggleTask('sync')">Start</button>
-                    </div>
+                <div class="control-group">
+                    <div><span class="status-dot" id="dot-sync"></span> Cloud Sync</div>
+                    <button id="btn-sync" onclick="toggleTask('sync')">Start</button>
                 </div>
             </div>
+        </div>
 
-            <div class="card" style="grid-column: span 2;">
-                <div class="card-header">Imagery</div>
-                <div id="latest-img-container" onclick="openGallery()">
-                    <img id="preview-img" src="" alt="No Images Yet">
-                </div>
-                <div class="gallery-controls">
-                    <button onclick="openGallery()">Open Gallery</button>
-                    <button onclick="playTimelapse()">▶ Play Timelapse</button>
-                    <div style="flex-grow:1; text-align:right; color:#94a3b8; padding-top:10px" id="img-date">--</div>
-                </div>
+        <div class="card" style="margin-top: 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="card-title" style="margin-bottom:0">Data Library</div>
+                <button onclick="playTimelapse()">▶ Play Timelapse</button>
             </div>
-
+            <table>
+                <thead>
+                    <tr><th>Filename</th><th>Date</th><th>Size</th><th>Actions</th></tr>
+                </thead>
+                <tbody id="file-table"></tbody>
+            </table>
         </div>
     </div>
 
-    <div id="log-modal" class="modal" onclick="if(event.target==this) closeLog()">
-        <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; margin-bottom:15px">
-                <h3 style="margin:0">Task Output</h3>
-                <button onclick="closeLog()">Close</button>
-            </div>
-            <pre id="log-output">Loading...</pre>
-        </div>
-    </div>
-
-    <div id="img-modal" class="modal" onclick="if(event.target==this) document.getElementById('img-modal').style.display='none'">
-        <div class="modal-content" id="img-modal-content">
-            <img id="full-image" src="">
-            <div style="margin-top:15px; display:flex; justify-content:center; gap:15px">
-                <button onclick="changeImage(-1)">← Prev</button>
-                <a id="download-link" href="" download><button>Save to Device</button></a>
-                <button onclick="changeImage(1)">Next →</button>
-            </div>
+    <div class="modal" id="gallery-modal">
+        <img id="modal-img" src="">
+        <div class="modal-controls">
+            <button onclick="changeSlide(-1)">← Prev</button>
+            <span id="slide-counter" style="align-self:center; font-family:'JetBrains Mono'">0/0</span>
+            <button onclick="changeSlide(1)">Next →</button>
+            <button onclick="closeModal()">Close</button>
         </div>
     </div>
 
     <script>
-        // --- BACKGROUND EFFECT ---
-        const canvas = document.getElementById('bg-canvas');
-        const ctx = canvas.getContext('2d');
-        let mouseX = 0, mouseY = 0;
+        // PARALLAX BACKGROUND
+        document.addEventListener('mousemove', (e) => {
+            const x = (e.clientX / window.innerWidth) * 20;
+            const y = (e.clientY / window.innerHeight) * 20;
+            document.getElementById('grid-bg').style.transform = `translate(-${x}px, -${y}px)`;
+        });
 
-        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-        window.addEventListener('resize', resize);
-        window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
-        resize();
-
-        function drawGrid() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.strokeStyle = '#334155';
-            ctx.lineWidth = 1;
-            
-            const gridSize = 50;
-            const offsetX = (mouseX - canvas.width/2) * 0.02;
-            const offsetY = (mouseY - canvas.height/2) * 0.02;
-
-            for(let x = 0; x <= canvas.width; x += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(x + offsetX, 0); ctx.lineTo(x - offsetX, canvas.height);
-                ctx.stroke();
-            }
-            for(let y = 0; y <= canvas.height; y += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(0, y + offsetY); ctx.lineTo(canvas.width, y - offsetY);
-                ctx.stroke();
-            }
-            requestAnimationFrame(drawGrid);
-        }
-        drawGrid();
-
-        // --- CORE LOGIC ---
-        let currentImages = [];
-        let currentImgIdx = 0;
-        let activeLogSession = null;
-
-        // Clock & Countdown
+        // CLOCK
         setInterval(() => {
-            const now = new Date();
-            document.getElementById('clock').innerText = now.toLocaleTimeString();
-            
-            const target = new Date();
-            target.setHours(13, 42, 0, 0);
-            if(now > target) target.setDate(target.getDate()+1);
-            const diff = target - now;
-            const h = Math.floor((diff/(1000*60*60))%24);
-            const m = Math.floor((diff/(1000*60))%60);
-            const s = Math.floor((diff/1000)%60);
-            document.getElementById('countdown').innerText = 
-                `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            document.getElementById('clock').innerText = new Date().toLocaleTimeString();
         }, 1000);
 
-        // Status Updater
-        async function updateStatus() {
+        let files = [];
+        let slideIndex = 0;
+        let playInterval;
+
+        async function refresh() {
             try {
-                const res = await fetch('/api/status');
+                // DASHBOARD DATA
+                const res = await fetch('/api/dashboard');
                 const data = await res.json();
                 
-                document.getElementById('cpu-temp').innerText = data.cpu_temp + "°";
-                document.getElementById('disk-percent').innerText = data.disk.percent + "%";
-                document.getElementById('disk-detail').innerText = `${data.disk.used}GB / ${data.disk.total}GB`;
+                document.getElementById('cpu-temp').innerText = data.stats.cpu + "°";
+                document.getElementById('disk-percent').innerText = data.stats.disk_percent + "%";
+                document.getElementById('disk-detail').innerText = data.stats.disk_text;
 
-                updateTaskUI('align', data.sessions.align);
-                updateTaskUI('capture', data.sessions.capture);
-                updateTaskUI('sync', data.sessions.sync);
-            } catch(e){}
+                // Update Tasks
+                updateBtn('align', data.tasks.align);
+                updateBtn('capture', data.tasks.capture);
+                updateBtn('sync', data.tasks.sync);
+
+                // Update Schedule
+                const schedList = document.getElementById('schedule-list');
+                schedList.innerHTML = data.schedule.map(s => `
+                    <div class="schedule-item">
+                        <span class="time-badge">${s.time_str}</span>
+                        <span style="color:var(--accent)">T-Minus ${s.countdown}</span>
+                    </div>
+                `).join('');
+
+                // FILES
+                const fRes = await fetch('/api/files');
+                files = await fRes.json();
+                const table = document.getElementById('file-table');
+                table.innerHTML = files.map(f => `
+                    <tr>
+                        <td style="font-family:'JetBrains Mono'">${f.name}</td>
+                        <td>${f.date}</td>
+                        <td>${f.size}</td>
+                        <td class="action-links">
+                            <a href="#" onclick="viewImage('${f.name}')">View</a>
+                            <a href="/images/${f.name}" download>Download</a>
+                            <span onclick="deleteFile('${f.name}')" class="btn-danger">Delete</span>
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch(e) { console.log(e); }
+        }
+
+        function updateBtn(task, active) {
+            const dot = document.getElementById(`dot-${task}`);
+            const btn = document.getElementById(`btn-${task}`);
+            dot.className = active ? "status-dot active" : "status-dot";
+            btn.innerText = active ? "Stop" : "Start";
+            btn.className = active ? "btn-danger" : "";
+            btn.onclick = () => sendControl(active ? "stop" : `start_${task}`, task);
+        }
+
+        async function sendControl(action, target) {
+            await fetch('/api/control', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action, target: target === 'sync' ? 'sat-sync' : (target === 'align' ? 'alignment' : 'capture')})
+            });
+            setTimeout(refresh, 500);
+        }
+
+        async function deleteFile(name) {
+            if(!confirm("Delete " + name + "?")) return;
+            await fetch('/api/delete', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({filename: name})
+            });
+            refresh();
+        }
+
+        // GALLERY FUNCTIONS
+        function viewImage(name) {
+            slideIndex = files.findIndex(f => f.name === name);
+            showSlide();
+            document.getElementById('gallery-modal').style.display = 'flex';
         }
         
-        function updateTaskUI(name, isActive) {
-            const dot = document.getElementById(`dot-${name}`);
-            const btn = document.getElementById(`btn-${name}`);
-            
-            dot.className = isActive ? "status-dot active" : "status-dot";
-            if(isActive) {
-                btn.innerText = "Stop";
-                btn.className = "btn-stop";
-                btn.onclick = () => stopTask(name === 'sync' ? 'sat-sync' : (name === 'align' ? 'alignment' : 'capture'));
-            } else {
-                btn.innerText = "Start";
-                btn.className = "";
-                btn.onclick = () => startTask(name);
-            }
-        }
-        setInterval(updateStatus, 2000);
-
-        // Task Controls
-        async function startTask(type) {
-            await fetch('/api/control', {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({action: `start_${type}`})
-            });
-            updateStatus();
-        }
-        async function stopTask(target) {
-            await fetch('/api/control', {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({action: 'stop_session', target: target})
-            });
-            updateStatus();
+        function showSlide() {
+            if(slideIndex >= files.length) slideIndex = 0;
+            if(slideIndex < 0) slideIndex = files.length - 1;
+            const f = files[slideIndex];
+            document.getElementById('modal-img').src = `/images/${f.name}`;
+            document.getElementById('slide-counter').innerText = `${slideIndex + 1}/${files.length}`;
         }
 
-        // Logs
-        async function viewLog(session) {
-            document.getElementById('log-modal').style.display = 'flex';
-            activeLogSession = session;
-            pollLogs();
-        }
-        async function pollLogs() {
-            if(!activeLogSession) return;
-            const res = await fetch(`/api/logs/${activeLogSession}`);
-            const data = await res.json();
-            document.getElementById('log-output').innerText = data.log || "No active session output.";
-            if(document.getElementById('log-modal').style.display === 'flex') {
-                setTimeout(pollLogs, 2000);
-            }
-        }
-        function closeLog() {
-            document.getElementById('log-modal').style.display = 'none';
-            activeLogSession = null;
+        function changeSlide(n) {
+            slideIndex += n;
+            showSlide();
         }
 
-        // Gallery & Timelapse
-        async function loadImages() {
-            const res = await fetch('/api/images');
-            currentImages = await res.json();
-            if(currentImages.length > 0) {
-                document.getElementById('preview-img').src = `/images/${currentImages[0]}`;
-                document.getElementById('img-date').innerText = currentImages[0];
-            }
-        }
-        
-        function openGallery() {
-            if(currentImages.length === 0) return;
-            currentImgIdx = 0;
-            showModalImage();
-            document.getElementById('img-modal').style.display = 'flex';
-        }
-
-        function showModalImage() {
-            const fname = currentImages[currentImgIdx];
-            document.getElementById('full-image').src = `/images/${fname}`;
-            document.getElementById('download-link').href = `/images/${fname}`;
-        }
-
-        function changeImage(dir) {
-            currentImgIdx += dir;
-            if(currentImgIdx < 0) currentImgIdx = currentImages.length - 1;
-            if(currentImgIdx >= currentImages.length) currentImgIdx = 0;
-            showModalImage();
+        function closeModal() {
+            document.getElementById('gallery-modal').style.display = 'none';
+            clearInterval(playInterval);
         }
 
         function playTimelapse() {
-            openGallery();
-            let idx = currentImages.length - 1; // Start from oldest
-            const interval = setInterval(() => {
-                if(document.getElementById('img-modal').style.display === 'none') {
-                    clearInterval(interval);
-                    return;
+            if(files.length === 0) return alert("No images to play!");
+            slideIndex = files.length - 1; // Start from oldest
+            document.getElementById('gallery-modal').style.display = 'flex';
+            playInterval = setInterval(() => {
+                slideIndex--;
+                if(slideIndex < 0) {
+                    clearInterval(playInterval); // Stop at end
+                } else {
+                    showSlide();
                 }
-                currentImgIdx = idx;
-                showModalImage();
-                idx--;
-                if(idx < 0) idx = currentImages.length - 1;
-            }, 300); // Speed of timelapse
+            }, 200); // 200ms per frame
         }
 
-        loadImages();
-        updateStatus();
+        refresh();
+        setInterval(refresh, 5000); // Poll every 5s
     </script>
 </body>
 </html>
