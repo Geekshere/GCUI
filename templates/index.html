@@ -3,311 +3,377 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ELECTRO-L5 // MISSION COMMAND</title>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <title>Elektro-L5 Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #00ff41; 
-            --dim: #004411;
-            --danger: #ff0055;
-            --bg: #050505;
-            --panel: rgba(20, 20, 20, 0.95);
-            --scanline: rgba(0, 255, 65, 0.05);
+            --bg: #0f172a;       /* Slate 900 */
+            --card: #1e293b;     /* Slate 800 */
+            --text: #f8fafc;     /* Slate 50 */
+            --accent: #3b82f6;   /* Blue 500 */
+            --success: #22c55e;  /* Green 500 */
+            --danger: #ef4444;   /* Red 500 */
+            --border: #334155;   /* Slate 700 */
         }
         body {
-            background-color: var(--bg);
-            color: var(--primary);
-            font-family: 'Share Tech Mono', monospace;
-            margin: 0;
-            padding: 20px;
+            margin: 0; font-family: 'Inter', sans-serif;
+            background-color: var(--bg); color: var(--text);
             overflow-x: hidden;
-            background-image: linear-gradient(0deg, transparent 24%, var(--scanline) 25%, var(--scanline) 26%, transparent 27%, transparent 74%, var(--scanline) 75%, var(--scanline) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, var(--scanline) 25%, var(--scanline) 26%, transparent 27%, transparent 74%, var(--scanline) 75%, var(--scanline) 76%, transparent 77%, transparent);
-            background-size: 50px 50px;
         }
 
-        /* --- BACKGROUND CLI ANIMATION --- */
-        #bg-cli {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1;
-            opacity: 0.15;
-            pointer-events: none;
-            overflow: hidden;
-            font-size: 12px;
-            padding: 20px;
-            white-space: pre;
+        /* --- INTERACTIVE BACKGROUND --- */
+        #bg-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; opacity: 0.2; pointer-events: none;
         }
 
         /* --- LAYOUT --- */
-        h1 { 
-            text-align: center; 
-            border: 1px solid var(--primary); 
-            padding: 10px; 
-            box-shadow: 0 0 15px var(--dim);
-            text-shadow: 0 0 10px var(--primary);
-            background: rgba(0,0,0,0.8);
-        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 25px;
-            margin-top: 30px;
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 30px;
         }
+        h1 { margin: 0; font-weight: 600; font-size: 1.5rem; letter-spacing: -0.5px; }
+        .status-badge { font-size: 0.9rem; padding: 5px 10px; background: var(--card); border-radius: 20px; border: 1px solid var(--border); }
+
+        /* --- CARDS --- */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         
-        .panel {
-            background: var(--panel);
-            border: 1px solid var(--primary);
-            padding: 20px;
-            position: relative;
-            backdrop-filter: blur(5px);
+        .card {
+            background: var(--card); border-radius: 12px; padding: 20px;
+            border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-        .panel::before {
-            content: "SYSTEM_MODULE";
-            position: absolute;
-            top: -10px; left: 10px;
-            background: var(--bg);
-            padding: 0 5px;
-            font-size: 0.8em;
-            color: var(--primary);
-        }
+        .card-header { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; margin-bottom: 15px; font-weight: 600; }
+        
+        /* --- METRICS --- */
+        .metric { font-size: 2.5rem; font-weight: 300; }
+        .metric-sub { font-size: 0.9rem; color: #94a3b8; }
 
-        /* --- WIDGETS --- */
-        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .stat-box { 
-            border: 1px solid #333; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s;
+        /* --- CONTROL ROW --- */
+        .control-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 0; border-bottom: 1px solid #334155;
         }
-        .stat-box:hover { background: var(--dim); border-color: var(--primary); }
-        .stat-val { font-size: 1.8em; font-weight: bold; }
-        .stat-label { font-size: 0.7em; opacity: 0.7; }
+        .control-row:last-child { border-bottom: none; }
+        .status-dot { height: 10px; width: 10px; border-radius: 50%; background: #475569; display: inline-block; margin-right: 10px; }
+        .status-dot.active { background: var(--success); box-shadow: 0 0 10px var(--success); }
+        
+        button {
+            background: var(--card); border: 1px solid var(--border); color: var(--text);
+            padding: 8px 16px; border-radius: 6px; cursor: pointer; transition: 0.2s; font-family: inherit;
+        }
+        button:hover { background: var(--accent); border-color: var(--accent); }
+        button.btn-stop { color: var(--danger); border-color: var(--danger); }
+        button.btn-stop:hover { background: var(--danger); color: white; }
 
-        /* --- INTERACTIVE SWITCHES (Fidgets) --- */
-        .switch-bank {
-            display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;
+        /* --- GALLERY --- */
+        #latest-img-container {
+            width: 100%; height: 300px; background: #000; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            position: relative; cursor: pointer;
         }
-        .toggle-btn {
-            background: #111; border: 1px solid #444; color: #666;
-            padding: 5px 10px; font-family: inherit; cursor: pointer; font-size: 0.8em;
-        }
-        .toggle-btn.active {
-            background: var(--dim); border-color: var(--primary); color: var(--primary);
-            box-shadow: 0 0 8px var(--primary);
-        }
+        #latest-img-container img { max-width: 100%; max-height: 100%; transition: 0.3s; }
+        #latest-img-container:hover img { transform: scale(1.02); }
+        .gallery-controls { display: flex; gap: 10px; margin-top: 15px; }
 
-        /* --- BUTTONS --- */
-        .btn {
-            width: 100%; padding: 15px; margin-bottom: 10px;
-            background: rgba(0,0,0,0.5); border: 1px solid var(--primary);
-            color: var(--primary); font-family: inherit; font-size: 1.1em;
-            cursor: pointer; text-transform: uppercase; transition: 0.2s;
-        }
-        .btn:hover { background: var(--primary); color: black; box-shadow: 0 0 15px var(--primary); }
-        .btn-danger { border-color: var(--danger); color: var(--danger); }
-        .btn-danger:hover { background: var(--danger); color: white; box-shadow: 0 0 15px var(--danger); }
-
-        /* --- FILE EXPLORER MODAL --- */
-        #file-modal {
+        /* --- MODALS --- */
+        .modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 100;
-            justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.8); z-index: 100; backdrop-filter: blur(5px);
+            align-items: center; justify-content: center;
         }
         .modal-content {
-            width: 80%; max-width: 600px; height: 70%;
-            background: #111; border: 2px solid var(--primary);
-            padding: 20px; overflow-y: auto;
-            box-shadow: 0 0 30px var(--dim);
+            background: var(--card); padding: 25px; border-radius: 12px; width: 90%; max-width: 800px;
+            max-height: 90vh; overflow-y: auto; border: 1px solid var(--border);
         }
-        .file-item {
-            padding: 8px; border-bottom: 1px solid #333; display: flex; justify-content: space-between;
-        }
-        .file-item:hover { background: var(--dim); }
+        pre { background: #0f172a; padding: 15px; border-radius: 6px; overflow-x: auto; font-family: monospace; color: #a5b4fc; }
 
-        /* --- COUNTDOWN --- */
-        #countdown { font-size: 3em; text-align: center; text-shadow: 0 0 10px var(--primary); }
+        /* FULL SCREEN IMAGE */
+        #img-modal-content { max-width: 95vw; max-height: 95vh; background: transparent; padding: 0; border: none; text-align: center; }
+        #full-image { max-width: 100%; max-height: 90vh; border-radius: 8px; }
         
-        img { max-width: 100%; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
-    <div id="bg-cli"></div> <h1>DUBAI GROUND STATION // <span style="font-size:0.6em">SECURE LINK</span></h1>
+    <canvas id="bg-canvas"></canvas>
 
-    <div class="dashboard">
-        
-        <div class="panel">
-            <h3 style="margin-top:0">ACQUISITION TIMER</h3>
-            <div id="countdown">--:--:--</div>
-            <div style="text-align:center; opacity:0.7">NEXT PASS: 13:42 GST</div>
-            <br>
-            <div class="stat-grid">
-                <div class="stat-box">
-                    <div class="stat-val" id="cpu-temp">--°C</div>
-                    <div class="stat-label">CORE TEMP</div>
-                </div>
-                <div class="stat-box" onclick="openFileExplorer()">
-                    <div class="stat-val" id="disk-percent" style="font-size:1.2em">--%</div>
-                    <div class="stat-label" id="disk-detail">-- GB / -- GB</div>
-                    <div class="stat-label" style="color:var(--primary)">[VIEW FILES]</div>
-                </div>
+    <div class="container">
+        <header>
+            <div>
+                <h1>SatDump Control</h1>
+                <div style="color: #94a3b8; font-size: 0.9rem;">Electro-L5 Ground Station // Dubai</div>
             </div>
-        </div>
+            <div class="status-badge" id="clock">--:--:--</div>
+        </header>
 
-        <div class="panel">
-            <h3 style="margin-top:0">SYSTEM CONTROL</h3>
+        <div class="grid">
             
-            <div class="switch-bank">
-                <button class="toggle-btn" onclick="toggleSwitch(this)">LNA PWR</button>
-                <button class="toggle-btn" onclick="toggleSwitch(this)">AUTO-TRACK</button>
-                <button class="toggle-btn" onclick="toggleSwitch(this)">ENCRYPTION</button>
-                <button class="toggle-btn active" onclick="toggleSwitch(this)">DATA LINK</button>
+            <div class="card">
+                <div class="card-header">System Health</div>
+                <div style="display: flex; gap: 30px;">
+                    <div>
+                        <div class="metric" id="cpu-temp">--°</div>
+                        <div class="metric-sub">CPU Temp</div>
+                    </div>
+                    <div>
+                        <div class="metric" id="disk-percent">--%</div>
+                        <div class="metric-sub" id="disk-detail">Storage</div>
+                    </div>
+                </div>
             </div>
 
-            <div style="margin-bottom: 15px; display:flex; justify-content: space-between;">
-                <div><span id="led-sync" style="color:#333">●</span> CLOUD SYNC</div>
-                <div><span id="led-align" style="color:#333">●</span> RADIO ALIGN</div>
-                <div><span id="led-capture" style="color:#333">●</span> HRIT CAPTURE</div>
+            <div class="card">
+                <div class="card-header">Next Acquisition</div>
+                <div class="metric" id="countdown">--:--:--</div>
+                <div class="metric-sub">Target: 13:42 GST (1691.0 MHz)</div>
             </div>
-            
-            <button class="btn" onclick="sendCommand('start_sync')">INITIATE CLOUD SYNC</button>
-            <button class="btn" onclick="sendCommand('start_align')">ENABLE ALIGNMENT (1693 MHz)</button>
-            <button class="btn" onclick="sendCommand('start_capture')">START CAPTURE SEQUENCE</button>
-            <button class="btn btn-danger" onclick="sendCommand('stop_all')">EMERGENCY SCRAM</button>
-        </div>
 
-        <div class="panel">
-            <h3 style="margin-top:0">DOWNLINK PREVIEW</h3>
-            <img id="latest-image" src="" alt="AWAITING SIGNAL...">
-            <div id="image-timestamp" style="text-align: center; margin-top: 5px; font-size: 0.8em">NO DATA</div>
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-header">Active Tasks</div>
+                
+                <div class="control-row">
+                    <div>
+                        <span class="status-dot" id="dot-align"></span> 
+                        <strong>Dish Alignment</strong> (RTL_TCP)
+                    </div>
+                    <div style="display:flex; gap:10px">
+                        <button onclick="viewLog('alignment')">Monitor</button>
+                        <button id="btn-align" onclick="toggleTask('align')">Start</button>
+                    </div>
+                </div>
+
+                <div class="control-row">
+                    <div>
+                        <span class="status-dot" id="dot-capture"></span> 
+                        <strong>HRIT Capture</strong> (SatDump)
+                    </div>
+                    <div style="display:flex; gap:10px">
+                        <button onclick="viewLog('capture')">Monitor</button>
+                        <button id="btn-capture" onclick="toggleTask('capture')">Start</button>
+                    </div>
+                </div>
+
+                <div class="control-row">
+                    <div>
+                        <span class="status-dot" id="dot-sync"></span> 
+                        <strong>iCloud Sync</strong> (Rclone)
+                    </div>
+                    <div style="display:flex; gap:10px">
+                        <button onclick="viewLog('sat-sync')">Monitor</button>
+                        <button id="btn-sync" onclick="toggleTask('sync')">Start</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-header">Imagery</div>
+                <div id="latest-img-container" onclick="openGallery()">
+                    <img id="preview-img" src="" alt="No Images Yet">
+                </div>
+                <div class="gallery-controls">
+                    <button onclick="openGallery()">Open Gallery</button>
+                    <button onclick="playTimelapse()">▶ Play Timelapse</button>
+                    <div style="flex-grow:1; text-align:right; color:#94a3b8; padding-top:10px" id="img-date">--</div>
+                </div>
+            </div>
+
         </div>
     </div>
 
-    <div id="file-modal" onclick="if(event.target == this) this.style.display='none'">
+    <div id="log-modal" class="modal" onclick="if(event.target==this) closeLog()">
         <div class="modal-content">
-            <h3 style="margin-top:0; border-bottom:1px solid var(--primary)">DATA STORAGE UNIT</h3>
-            <div id="file-list">Loading...</div>
-            <button class="btn" style="margin-top:20px" onclick="document.getElementById('file-modal').style.display='none'">CLOSE</button>
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px">
+                <h3 style="margin:0">Task Output</h3>
+                <button onclick="closeLog()">Close</button>
+            </div>
+            <pre id="log-output">Loading...</pre>
+        </div>
+    </div>
+
+    <div id="img-modal" class="modal" onclick="if(event.target==this) document.getElementById('img-modal').style.display='none'">
+        <div class="modal-content" id="img-modal-content">
+            <img id="full-image" src="">
+            <div style="margin-top:15px; display:flex; justify-content:center; gap:15px">
+                <button onclick="changeImage(-1)">← Prev</button>
+                <a id="download-link" href="" download><button>Save to Device</button></a>
+                <button onclick="changeImage(1)">Next →</button>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- 1. THE BACKGROUND CLI EFFECT ---
-        const cliLines = [
-            "INITIALIZING ORBITAL PARAMETERS...", "CHECKING TLE DATA FOR ELECTRO-L5...", "LNA GAIN SET TO 45dB...",
-            "CONNECTING TO 1691.0 MHZ...", "SYNC ESTABLISHED...", "DECODING PACKET STREAM...",
-            "TEMP CHECK: NOMINAL...", "RCLONE SYNC: ACTIVE...", "BUFFER CLEAR...", "WAITING FOR BURST..."
-        ];
-        const bgCli = document.getElementById('bg-cli');
-        let lineIdx = 0;
-        
-        setInterval(() => {
-            const line = document.createElement('div');
-            line.innerText = "> " + cliLines[Math.floor(Math.random() * cliLines.length)] + " [" + Math.random().toString(16).substr(2, 4) + "]";
-            bgCli.appendChild(line);
-            if (bgCli.children.length > 20) bgCli.removeChild(bgCli.firstChild);
-        }, 800);
+        // --- BACKGROUND EFFECT ---
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let mouseX = 0, mouseY = 0;
 
-        // --- 2. INTERACTIVE SWITCHES ---
-        function toggleSwitch(btn) {
-            btn.classList.toggle('active');
-            // Plays a fake sound logic here if you wanted
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize);
+        window.addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+        resize();
+
+        function drawGrid() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 1;
+            
+            const gridSize = 50;
+            const offsetX = (mouseX - canvas.width/2) * 0.02;
+            const offsetY = (mouseY - canvas.height/2) * 0.02;
+
+            for(let x = 0; x <= canvas.width; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x + offsetX, 0); ctx.lineTo(x - offsetX, canvas.height);
+                ctx.stroke();
+            }
+            for(let y = 0; y <= canvas.height; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y + offsetY); ctx.lineTo(canvas.width, y - offsetY);
+                ctx.stroke();
+            }
+            requestAnimationFrame(drawGrid);
         }
+        drawGrid();
 
-        // --- 3. COUNTDOWN ---
-        function updateCountdown() {
+        // --- CORE LOGIC ---
+        let currentImages = [];
+        let currentImgIdx = 0;
+        let activeLogSession = null;
+
+        // Clock & Countdown
+        setInterval(() => {
             const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString();
+            
             const target = new Date();
             target.setHours(13, 42, 0, 0);
-            if (now > target) target.setDate(target.getDate() + 1);
-            
+            if(now > target) target.setDate(target.getDate()+1);
             const diff = target - now;
-            const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
-            const m = Math.floor((diff / (1000 * 60)) % 60);
-            const s = Math.floor((diff / 1000) % 60);
-            document.getElementById("countdown").innerText = 
-                `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-        }
-        setInterval(updateCountdown, 1000);
+            const h = Math.floor((diff/(1000*60*60))%24);
+            const m = Math.floor((diff/(1000*60))%60);
+            const s = Math.floor((diff/1000)%60);
+            document.getElementById('countdown').innerText = 
+                `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        }, 1000);
 
-        // --- 4. STATUS UPDATER ---
+        // Status Updater
         async function updateStatus() {
             try {
                 const res = await fetch('/api/status');
                 const data = await res.json();
                 
-                // Hardware
-                document.getElementById('cpu-temp').innerText = data.cpu_temp + "°C";
-                document.getElementById('disk-percent').innerText = data.disk.percent + "% USED";
-                document.getElementById('disk-detail').innerText = `${data.disk.used} GB / ${data.disk.total} GB`;
+                document.getElementById('cpu-temp').innerText = data.cpu_temp + "°";
+                document.getElementById('disk-percent').innerText = data.disk.percent + "%";
+                document.getElementById('disk-detail').innerText = `${data.disk.used}GB / ${data.disk.total}GB`;
 
-                // LEDs
-                document.getElementById('led-sync').style.color = data.sync_status ? "var(--primary)" : "#333";
-                document.getElementById('led-sync').style.textShadow = data.sync_status ? "0 0 10px var(--primary)" : "none";
-                
-                document.getElementById('led-align').style.color = data.align_status ? "var(--primary)" : "#333";
-                document.getElementById('led-align').style.textShadow = data.align_status ? "0 0 10px var(--primary)" : "none";
-
-                document.getElementById('led-capture').style.color = data.capture_status ? "var(--danger)" : "#333";
-                document.getElementById('led-capture').style.textShadow = data.capture_status ? "0 0 10px var(--danger)" : "none";
-
-            } catch(e) {}
+                updateTaskUI('align', data.sessions.align);
+                updateTaskUI('capture', data.sessions.capture);
+                updateTaskUI('sync', data.sessions.sync);
+            } catch(e){}
+        }
+        
+        function updateTaskUI(name, isActive) {
+            const dot = document.getElementById(`dot-${name}`);
+            const btn = document.getElementById(`btn-${name}`);
+            
+            dot.className = isActive ? "status-dot active" : "status-dot";
+            if(isActive) {
+                btn.innerText = "Stop";
+                btn.className = "btn-stop";
+                btn.onclick = () => stopTask(name === 'sync' ? 'sat-sync' : (name === 'align' ? 'alignment' : 'capture'));
+            } else {
+                btn.innerText = "Start";
+                btn.className = "";
+                btn.onclick = () => startTask(name);
+            }
         }
         setInterval(updateStatus, 2000);
 
-        // --- 5. IMAGE GALLERY ---
-        async function updateImage() {
-            try {
-                const res = await fetch('/api/images');
-                const images = await res.json();
-                if (images.length > 0) {
-                    const latest = images[0];
-                    const imgEl = document.getElementById('latest-image');
-                    if (!imgEl.src.includes(latest)) {
-                        imgEl.src = "/images/" + latest;
-                        document.getElementById('image-timestamp').innerText = latest;
-                    }
-                }
-            } catch(e) {}
-        }
-        setInterval(updateImage, 5000);
-
-        // --- 6. FILE EXPLORER ---
-        async function openFileExplorer() {
-            const modal = document.getElementById('file-modal');
-            const list = document.getElementById('file-list');
-            modal.style.display = "flex";
-            list.innerHTML = "Scanning Storage...";
-            
-            try {
-                const res = await fetch('/api/files');
-                const files = await res.json();
-                
-                if (files.error) {
-                    list.innerHTML = "ERROR: " + files.error;
-                    return;
-                }
-                
-                list.innerHTML = "";
-                files.forEach(f => {
-                    const div = document.createElement('div');
-                    div.className = "file-item";
-                    div.innerHTML = `<span>${f.name}</span> <span style="opacity:0.6">${f.size} MB</span>`;
-                    list.appendChild(div);
-                });
-            } catch(e) { list.innerHTML = "Connection Error"; }
-        }
-
-        // --- 7. COMMANDS ---
-        async function sendCommand(action) {
+        // Task Controls
+        async function startTask(type) {
             await fetch('/api/control', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({action: action})
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({action: `start_${type}`})
+            });
+            updateStatus();
+        }
+        async function stopTask(target) {
+            await fetch('/api/control', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({action: 'stop_session', target: target})
             });
             updateStatus();
         }
 
+        // Logs
+        async function viewLog(session) {
+            document.getElementById('log-modal').style.display = 'flex';
+            activeLogSession = session;
+            pollLogs();
+        }
+        async function pollLogs() {
+            if(!activeLogSession) return;
+            const res = await fetch(`/api/logs/${activeLogSession}`);
+            const data = await res.json();
+            document.getElementById('log-output').innerText = data.log || "No active session output.";
+            if(document.getElementById('log-modal').style.display === 'flex') {
+                setTimeout(pollLogs, 2000);
+            }
+        }
+        function closeLog() {
+            document.getElementById('log-modal').style.display = 'none';
+            activeLogSession = null;
+        }
+
+        // Gallery & Timelapse
+        async function loadImages() {
+            const res = await fetch('/api/images');
+            currentImages = await res.json();
+            if(currentImages.length > 0) {
+                document.getElementById('preview-img').src = `/images/${currentImages[0]}`;
+                document.getElementById('img-date').innerText = currentImages[0];
+            }
+        }
+        
+        function openGallery() {
+            if(currentImages.length === 0) return;
+            currentImgIdx = 0;
+            showModalImage();
+            document.getElementById('img-modal').style.display = 'flex';
+        }
+
+        function showModalImage() {
+            const fname = currentImages[currentImgIdx];
+            document.getElementById('full-image').src = `/images/${fname}`;
+            document.getElementById('download-link').href = `/images/${fname}`;
+        }
+
+        function changeImage(dir) {
+            currentImgIdx += dir;
+            if(currentImgIdx < 0) currentImgIdx = currentImages.length - 1;
+            if(currentImgIdx >= currentImages.length) currentImgIdx = 0;
+            showModalImage();
+        }
+
+        function playTimelapse() {
+            openGallery();
+            let idx = currentImages.length - 1; // Start from oldest
+            const interval = setInterval(() => {
+                if(document.getElementById('img-modal').style.display === 'none') {
+                    clearInterval(interval);
+                    return;
+                }
+                currentImgIdx = idx;
+                showModalImage();
+                idx--;
+                if(idx < 0) idx = currentImages.length - 1;
+            }, 300); // Speed of timelapse
+        }
+
+        loadImages();
         updateStatus();
-        updateImage();
     </script>
 </body>
 </html>

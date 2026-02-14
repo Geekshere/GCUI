@@ -1,18 +1,13 @@
 import os
-import time
 import subprocess
 import shutil
-import psutil
 from flask import Flask, render_template, jsonify, request, send_from_directory
 
 app = Flask(__name__)
 
 # --- CONFIGURATION ---
-# Pointing to your specific build folder
 BASE_DIR = os.path.expanduser("~/SatDump/build/elektro_l3_output")
 IMAGE_DIR = os.path.join(BASE_DIR, "images")
-
-# Ensure directories exist so the dashboard doesn't crash
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 def get_cpu_temp():
@@ -22,8 +17,7 @@ def get_cpu_temp():
     except:
         return 0
 
-def get_disk_details():
-    # Returns precise GB usage
+def get_disk_usage():
     total, used, free = shutil.disk_usage("/")
     return {
         "total": round(total / (2**30), 1),
@@ -33,9 +27,9 @@ def get_disk_details():
 
 def is_tmux_running(session_name):
     try:
-        result = subprocess.run(["tmux", "has-session", "-t", session_name], 
-                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return result.returncode == 0
+        res = subprocess.run(["tmux", "has-session", "-t", session_name], 
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return res.returncode == 0
     except:
         return False
 
@@ -47,34 +41,31 @@ def index():
 def status():
     return jsonify({
         "cpu_temp": get_cpu_temp(),
-        "disk": get_disk_details(),
-        "sync_status": is_tmux_running("sat-sync"),
-        "align_status": is_tmux_running("alignment"),
-        "capture_status": is_tmux_running("capture")
+        "disk": get_disk_usage(),
+        "sessions": {
+            "sync": is_tmux_running("sat-sync"),
+            "align": is_tmux_running("alignment"),
+            "capture": is_tmux_running("capture")
+        }
     })
 
-@app.route('/api/files')
-def list_files():
-    # Lists files in the output directory for the explorer
-    file_list = []
+@app.route('/api/logs/<session>')
+def get_logs(session):
+    # Reads the last 50 lines of the tmux session
+    if not is_tmux_running(session):
+        return jsonify({"log": "SESSION OFFLINE"})
     try:
-        for f in os.listdir(IMAGE_DIR):
-            path = os.path.join(IMAGE_DIR, f)
-            if os.path.isfile(path):
-                size_mb = round(os.path.getsize(path) / (1024 * 1024), 2)
-                file_list.append({"name": f, "size": size_mb})
+        # capture-pane outputs the text currently on screen
+        res = subprocess.check_output(["tmux", "capture-pane", "-pt", session, "-S", "-50"])
+        return jsonify({"log": res.decode('utf-8', errors='ignore')})
     except Exception as e:
-        return jsonify({"error": str(e)})
-    
-    # Sort by name (or you could sort by time)
-    return jsonify(sorted(file_list, key=lambda x: x['name']))
+        return jsonify({"log": str(e)})
 
 @app.route('/api/images')
 def get_images():
     if not os.path.exists(IMAGE_DIR):
         return jsonify([])
     files = [f for f in os.listdir(IMAGE_DIR) if f.endswith(('.png', '.jpg', '.jpeg'))]
-    # Sort by modification time (newest first)
     files.sort(key=lambda x: os.path.getmtime(os.path.join(IMAGE_DIR, x)), reverse=True)
     return jsonify(files)
 
@@ -87,7 +78,6 @@ def control():
     data = request.json
     action = data.get('action')
     
-    # These commands run strictly in the system shell, so venv doesn't affect tmux itself
     if action == "start_sync":
         cmd = f"tmux new-session -d -s sat-sync 'while true; do rclone sync {IMAGE_DIR} iclouddrive:SatImages -P; sleep 300; done'"
         subprocess.Popen(cmd, shell=True)
@@ -97,14 +87,14 @@ def control():
         subprocess.Popen(cmd, shell=True)
         
     elif action == "start_capture":
-        # The HRIT command
+        # HRIT Command
         cmd = f"tmux new-session -d -s capture 'satdump live elektro_hrit {BASE_DIR} --source rtlsdr --frequency 1691000000 --samplerate 2048000 --gain 45 --bias'"
         subprocess.Popen(cmd, shell=True)
         
-    elif action == "stop_all":
-        subprocess.Popen("tmux kill-session -t sat-sync", shell=True)
-        subprocess.Popen("tmux kill-session -t alignment", shell=True)
-        subprocess.Popen("tmux kill-session -t capture", shell=True)
+    elif action == "stop_session":
+        target = data.get('target')
+        if target in ['sat-sync', 'alignment', 'capture']:
+            subprocess.Popen(f"tmux kill-session -t {target}", shell=True)
 
     return jsonify({"status": "executed"})
 
