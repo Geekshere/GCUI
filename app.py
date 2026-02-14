@@ -80,9 +80,20 @@ def get_data():
         }
     })
 
+@app.route('/api/logs/<session>')
+def get_logs(session):
+    try:
+        # Check if session exists first
+        check = subprocess.run(["tmux", "has-session", "-t", session], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if check.returncode != 0:
+            return jsonify({"log": "SESSION OFFLINE (Task is not running)"})
+            
+        res = subprocess.check_output(["tmux", "capture-pane", "-pt", session, "-S", "-50"])
+        return jsonify({"log": res.decode('utf-8', errors='ignore')})
+    except Exception as e: return jsonify({"log": str(e)})
+
 @app.route('/api/files')
 def get_files():
-    # Returns ALL files with detailed timestamps for the frontend to sort
     if not os.path.exists(IMAGE_DIR): return jsonify([])
     files = []
     for f in os.listdir(IMAGE_DIR):
@@ -91,10 +102,9 @@ def get_files():
             stat = os.stat(path)
             files.append({
                 "name": f,
-                "ts": stat.st_mtime, # Epoch timestamp
+                "ts": stat.st_mtime,
                 "size_mb": round(stat.st_size / (1024*1024), 2)
             })
-    # Sort by new to old
     return jsonify(sorted(files, key=lambda x: x['ts'], reverse=True))
 
 @app.route('/api/control', methods=['POST'])
@@ -111,6 +121,10 @@ def control():
         subprocess.Popen(cmd, shell=True)
     elif action == "stop":
         subprocess.Popen(f"tmux kill-session -t {data.get('target')}", shell=True)
+    elif action == "delete":
+        path = os.path.join(IMAGE_DIR, data.get('filename'))
+        if os.path.exists(path): os.remove(path)
+        
     return jsonify({"status": "ok"})
 
 @app.route('/images/<path:filename>')
