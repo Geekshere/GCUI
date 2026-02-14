@@ -7,14 +7,10 @@ from flask import Flask, render_template, jsonify, request, send_from_directory
 
 app = Flask(__name__)
 
-# --- CONFIGURATION ---
+# --- CONFIG ---
 BASE_DIR = os.path.expanduser("~/SatDump/build/elektro_l3_output")
 IMAGE_DIR = os.path.join(BASE_DIR, "images")
 TUNNEL_LOG = os.path.expanduser("~/mission_control/tunnel.log")
-
-# SECURITY: The PIN required to Start/Stop tasks or Delete files.
-ADMIN_PIN = "1342" 
-
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 # Electro-L Schedule
@@ -99,10 +95,6 @@ def get_files():
 @app.route('/api/control', methods=['POST'])
 def control():
     data = request.json
-    # SECURITY CHECK
-    if str(data.get('pin')) != ADMIN_PIN:
-        return jsonify({"status": "error", "message": "Incorrect PIN"}), 403
-
     action = data.get('action')
     if action == "start_capture":
         cmd = f"tmux new-session -d -s capture 'satdump live elektro_hrit {BASE_DIR} --source rtlsdr --frequency 1691000000 --samplerate 2048000 --gain 45 --bias'"
