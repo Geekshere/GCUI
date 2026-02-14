@@ -10,18 +10,17 @@ app = Flask(__name__)
 # --- CONFIG ---
 BASE_DIR = os.path.expanduser("~/SatDump/build/elektro_l3_output")
 IMAGE_DIR = os.path.join(BASE_DIR, "images")
-TUNNEL_LOG = os.path.expanduser("~/mission_control/tunnel.log")
+# Hardcoded path to ensure systemd finds it correctly
+TUNNEL_LOG = "/home/ethan/mission_control/tunnel.log" 
 ADMIN_PIN = "9494"
 
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
-# Electro-L5 Schedule: Standard MSU-GS imaging is every 30 mins.
-# HRIT typically transmits at XX:12 and XX:42.
+# Electro-L Schedule
 TRANSMISSION_MINUTES = [12, 42]
 
 def get_next_pass():
     now = datetime.datetime.now()
-    # Search next 24 hours for 30-min windows
     for day_offset in [0, 1]:
         base = now + datetime.timedelta(days=day_offset)
         for hour in range(0, 24):
@@ -33,18 +32,20 @@ def get_next_pass():
                     mins = int((diff.total_seconds() % 3600) // 60)
                     return {
                         "absolute": target.strftime("%H:%M"),
-                        "relative": f"{hrs}h {mins}m"
+                        "relative": f"{hrs}h {mins}m",
+                        "is_active": hrs == 0 and mins < 2 # Signal 'Active' if < 2 mins away
                     }
-    return {"absolute": "--:--", "relative": "--"}
+    return {"absolute": "--:--", "relative": "--", "is_active": False}
 
 def get_tunnel_url():
-    if not os.path.exists(TUNNEL_LOG): return "Tunnel Offline"
+    if not os.path.exists(TUNNEL_LOG): return "Log Missing"
     try:
         with open(TUNNEL_LOG, 'r') as f:
             content = f.read()
-            match = re.search(r'https://[a-zA-Z0-9-]+\.trycloudflare\.com', content)
-            return match.group(0) if match else "Searching..."
-    except: return "Log Error"
+            # Find ALL matches and take the LAST one (most recent)
+            matches = re.findall(r'https://[\w-]+\.trycloudflare\.com', content)
+            return matches[-1] if matches else "Searching..."
+    except: return "Read Error"
 
 @app.route('/')
 def index(): return render_template('index.html')
@@ -53,7 +54,6 @@ def index(): return render_template('index.html')
 def get_data():
     try:
         with open("/sys/class/thermal/thermal_zone0/temp", "r") as f:
-            # KEEP DECIMAL: Round to 1 decimal place
             temp = round(int(f.read()) / 1000, 1)
     except: temp = 0
     total, used, free = shutil.disk_usage("/")

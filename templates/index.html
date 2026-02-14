@@ -44,28 +44,34 @@
         .btn-stop { border-color: var(--danger); color: var(--danger); }
         .btn-stop:hover { background: var(--danger); color: white; }
 
-        /* CALENDAR */
+        /* CALENDAR NAV */
         .cal-nav-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .cal-title-group { display: flex; align-items: center; gap: 15px; }
         .cal-arrow { cursor: pointer; color: var(--sub); font-weight: bold; font-size: 1.5rem; user-select: none; }
         .view-select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px; border-radius: 4px; }
         
+        /* CALENDAR GRIDS */
         .cal-grid-year { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; }
         .cal-grid-month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; width: 100%; }
         .cal-grid-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; width: 100%; }
         
+        /* CELLS */
         .cal-cell { background: rgba(255,255,255,0.03); border-radius: 4px; padding: 10px; cursor: pointer; min-height: 40px; position: relative; text-align: center; }
         .cal-cell:hover { background: var(--accent); color: white; }
         .cal-cell.has-data::after { content: ''; position: absolute; bottom: 5px; right: 5px; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
 
+        /* WEEK COLUMN */
         .week-col { background: rgba(255,255,255,0.02); min-height: 80px; border-radius: 4px; padding: 5px; display: flex; flex-direction: column; gap: 5px; }
+        .week-col:hover { background: rgba(255,255,255,0.05); border: 1px solid var(--accent); }
         .week-head { text-align: center; font-size: 0.8rem; color: var(--sub); padding-bottom: 5px; border-bottom: 1px solid var(--border); margin-bottom: 5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .week-item { background: var(--accent); padding: 4px; border-radius: 3px; font-size: 0.7rem; cursor: pointer; text-align: center; color: white; white-space: nowrap; overflow: hidden; }
+        .week-item:hover { filter: brightness(1.2); }
 
-        /* FILES */
+        /* FILES GRID */
         .files-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 15px; }
         .file-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; cursor: pointer; aspect-ratio: 16/9; position: relative; }
         .file-card img { width: 100%; height: 100%; object-fit: cover; }
+        .file-card:hover { border-color: var(--accent); }
         .pagination { display: flex; justify-content: center; gap: 10px; margin-top: 20px; }
 
         /* MODALS */
@@ -76,7 +82,7 @@
         
         .pin-input { background: #0f172a; border: 1px solid var(--border); color: white; padding: 10px; font-size: 1.5rem; text-align: center; width: 150px; border-radius: 8px; margin: 20px auto; display: block; letter-spacing: 5px; }
 
-        /* NEW SETTINGS & COPY LINK STYLE */
+        /* SETTINGS & LINK STYLE */
         .setting-group { margin-bottom: 20px; }
         .setting-label { font-size: 0.85rem; color: var(--sub); margin-bottom: 8px; display: block; }
         .toggle-container { display: flex; background: rgba(255,255,255,0.05); border-radius: 6px; padding: 4px; border: 1px solid var(--border); }
@@ -113,7 +119,12 @@
         <div class="card">
             <div class="card-header">Next Acquisition (30 min)</div>
             <div class="metric-row"><div class="big-val" id="pass-rel">--</div><div class="sub-val" id="pass-abs">--</div></div>
+            <div class="detail-row">
+                <span>Target: 76°E (HRIT)</span>
+                <span id="acq-status" style="color:var(--accent); font-weight:600;">Scheduled</span>
+            </div>
         </div>
+        
         <div class="card">
             <div class="card-header">Storage</div>
             <div class="metric-row"><div class="big-val" id="disk-percent">--%</div></div>
@@ -232,19 +243,29 @@
         const res = await fetch('/api/data'); const data = await res.json();
         const next = data.next_pass;
         
+        // Pass Logic
         if(!settings.use24h && next.absolute !== "--:--") {
             let [h, m] = next.absolute.split(':');
             let ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
             document.getElementById('pass-abs').innerText = `at ${h}:${m} ${ampm}`;
         } else { document.getElementById('pass-abs').innerText = "at " + next.absolute; }
-        
         document.getElementById('pass-rel').innerText = next.relative;
+
+        // STATUS COLOR LOGIC
+        const statusEl = document.getElementById('acq-status');
+        if(next.is_active) {
+            statusEl.innerText = "Receiving Signal";
+            statusEl.style.color = "var(--success)";
+        } else {
+            statusEl.innerText = "Scheduled";
+            statusEl.style.color = "var(--accent)";
+        }
+
         document.getElementById('disk-percent').innerText = data.system.disk.percent + "%";
         document.getElementById('disk-details').innerText = `${data.system.disk.used_gb} / ${data.system.disk.total_gb} GB`;
 
         let t = data.system.temp;
         if(settings.useF) t = (t * 9/5) + 32;
-        // SHOW DECIMAL
         document.getElementById('temp').innerText = t.toFixed(1) + (settings.useF ? "°F" : "°C");
 
         document.getElementById('tunnel-input').value = data.system.tunnel_url;
@@ -318,9 +339,11 @@
             for(let i=0; i<7; i++) {
                 const day = new Date(start); day.setDate(start.getDate() + i);
                 const col = document.createElement('div'); col.className = 'week-col';
-                col.innerHTML = `<div class="week-head">${day.toLocaleDateString('default',{weekday:'short'})} ${day.getDate()}</div>`;
+                col.onclick = () => jumpToDay(day.getTime()); // CLICKABLE BUBBLE
+                col.style.cursor = 'pointer';
+                col.innerHTML = `<div class="week-head">${day.toLocaleDateString('default', {weekday:'short'})} ${day.getDate()}</div>`;
                 getFilesForRange(day, day).forEach(f => {
-                    col.innerHTML += `<div class="week-item" onclick="openImg('${f.name}')">${new Date(f.ts*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>`;
+                    col.innerHTML += `<div class="week-item" onclick="event.stopPropagation(); openImg('${f.name}')">${new Date(f.ts*1000).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>`;
                 });
                 container.appendChild(col);
             }
@@ -339,7 +362,37 @@
         }
     }
 
-    // --- SETTINGS LOGIC ---
+    function jumpToDay(ts) { currentDate = new Date(ts); changeView('day'); }
+    function changeView(v) { view = v; document.getElementById('view-select').value = v; renderCalendar(); }
+    function navTime(dir) {
+        if(view==='month') currentDate.setMonth(currentDate.getMonth()+d);
+        if(view==='week') currentDate.setDate(currentDate.getDate()+(d*7));
+        renderCalendar();
+    }
+    // Fixed missing navTime implementation in previous copy
+    function navTime(d) {
+        if(view==='year') currentDate.setFullYear(currentDate.getFullYear()+d);
+        if(view==='month') currentDate.setMonth(currentDate.getMonth()+d);
+        if(view==='week') currentDate.setDate(currentDate.getDate()+(d*7));
+        if(view==='day') currentDate.setDate(currentDate.getDate()+d);
+        renderCalendar();
+    }
+
+    function hasData(y, m, d=null) { return allFiles.some(f => { const t = new Date(f.ts*1000); return t.getFullYear()===y && t.getMonth()===m && (!d || dt.getDate()===d); }); }
+    function getFilesForRange(s, e) {
+        const S = new Date(s); S.setHours(0,0,0,0); const E = new Date(e); E.setHours(23,59,59,999);
+        return allFiles.filter(f => { const t = new Date(f.ts*1000); return t>=S && t<=E; });
+    }
+    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; stopSlideshow(); }
+    function openImg(name) { openModal('full-img-modal'); document.getElementById('modal-img').src = `/images/${name}`; }
+    async function viewLogs(s) { openModal('log-modal'); const res = await fetch(`/api/logs/${s}`); const d = await res.json(); document.getElementById('log-output').innerText = d.log; }
+    async function shareImg(e) { e.stopPropagation(); const url = document.getElementById('modal-img').src; try { if(navigator.share) await navigator.share({url: url}); else alert("Share not supported."); } catch(e){} }
+    function playContextTimelapse() { /* Same logic */ }
+    function stopSlideshow(e) { if(e)e.stopPropagation(); clearInterval(slideshowInt); }
+    function renderFiles() { /* Same logic */ }
+    function changePage(d) { if(page+d >= 0) { page+=d; renderFiles(); } }
+
     function setTimeFormat(val) { settings.use24h = val; localStorage.setItem('use24h', val); updateSettingsUI(); updateMetrics(); }
     function setTempUnit(val) { settings.useF = val; localStorage.setItem('useF', val); updateSettingsUI(); updateMetrics(); }
     
@@ -353,32 +406,9 @@
     function copyLink() {
         const copyText = document.getElementById("tunnel-input");
         copyText.select();
-        copyText.setSelectionRange(0, 99999);
         navigator.clipboard.writeText(copyText.value);
         alert("Link Copied!");
     }
-
-    // --- HELPERS ---
-    function changeView(v) { view = v; document.getElementById('view-select').value = v; renderCalendar(); }
-    function navTime(d) {
-        if(view==='month') currentDate.setMonth(currentDate.getMonth()+d);
-        if(view==='week') currentDate.setDate(currentDate.getDate()+(d*7));
-        renderCalendar();
-    }
-    function hasData(y, m, d=null) { return allFiles.some(f => { const t = new Date(f.ts*1000); return t.getFullYear()===y && t.getMonth()===m && (!d || dt.getDate()===d); }); }
-    function getFilesForRange(s, e) {
-        const S = new Date(s); S.setHours(0,0,0,0); const E = new Date(e); E.setHours(23,59,59,999);
-        return allFiles.filter(f => { const t = new Date(f.ts*1000); return t>=S && t<=E; });
-    }
-    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; stopSlideshow(); }
-    function openImg(name) { openModal('full-img-modal'); document.getElementById('modal-img').src = `/images/${name}`; }
-    async function viewLogs(s) { openModal('log-modal'); const res = await fetch(`/api/logs/${s}`); const d = await res.json(); document.getElementById('log-output').innerText = d.log; }
-    async function shareImg(e) { e.stopPropagation(); const url = document.getElementById('modal-img').src; try { if(navigator.share) await navigator.share({url: url}); else alert("Share not supported."); } catch(e){} }
-    function playContextTimelapse() { /* ... Same logic ... */ }
-    function stopSlideshow(e) { if(e) e.stopPropagation(); clearInterval(slideshowInt); }
-    function renderFiles() { /* ... Same files grid logic ... */ }
-    function changePage(d) { if(page+d >= 0) { page+=d; renderFiles(); } }
 
     init();
 </script>
