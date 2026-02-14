@@ -19,7 +19,6 @@ TX_MINUTE = 42
 
 def get_next_pass():
     now = datetime.datetime.now()
-    # Check next 24h
     for day_offset in [0, 1]:
         base = now + datetime.timedelta(days=day_offset)
         for h in SCHEDULE_WINDOWS:
@@ -36,12 +35,10 @@ def get_next_pass():
     return {"absolute": "--:--", "relative": "--", "timestamp": 0}
 
 def get_tunnel_url():
-    # Scrapes the log file for the latest .trycloudflare.com link
     if not os.path.exists(TUNNEL_LOG): return "Tunnel Offline"
     try:
         with open(TUNNEL_LOG, 'r') as f:
             content = f.read()
-            # Regex to find the URL
             match = re.search(r'https://[a-zA-Z0-9-]+\.trycloudflare\.com', content)
             return match.group(0) if match else "Searching..."
     except: return "Log Error"
@@ -68,7 +65,11 @@ def get_data():
     return jsonify({
         "system": {
             "temp": temp,
-            "disk_percent": round((used / total) * 100, 1),
+            "disk": {
+                "percent": round((used / total) * 100, 1),
+                "used_gb": round(used / (2**30), 1),
+                "total_gb": round(total / (2**30), 1)
+            },
             "tunnel_url": get_tunnel_url()
         },
         "next_pass": get_next_pass(),
@@ -79,38 +80,37 @@ def get_data():
         }
     })
 
-@app.route('/api/calendar')
-def get_calendar_data():
-    # Returns a list of dates that have images
+@app.route('/api/files')
+def get_files():
+    # Returns ALL files with detailed timestamps for the frontend to sort
     if not os.path.exists(IMAGE_DIR): return jsonify([])
-    dates = set()
+    files = []
     for f in os.listdir(IMAGE_DIR):
-        if f.endswith(('.png', '.jpg')):
-            # Assuming file has timestamp or we use file stats
-            ts = os.path.getmtime(os.path.join(IMAGE_DIR, f))
-            date_str = datetime.datetime.fromtimestamp(ts).strftime("%Y-%m-%d")
-            dates.add(date_str)
-    return jsonify(list(dates))
+        if f.endswith(('.png', '.jpg', '.jpeg')):
+            path = os.path.join(IMAGE_DIR, f)
+            stat = os.stat(path)
+            files.append({
+                "name": f,
+                "ts": stat.st_mtime, # Epoch timestamp
+                "size_mb": round(stat.st_size / (1024*1024), 2)
+            })
+    # Sort by new to old
+    return jsonify(sorted(files, key=lambda x: x['ts'], reverse=True))
 
 @app.route('/api/control', methods=['POST'])
 def control():
     data = request.json
     action = data.get('action')
-    
     if action == "start_capture":
-        # HRIT Capture
         cmd = f"tmux new-session -d -s capture 'satdump live elektro_hrit {BASE_DIR} --source rtlsdr --frequency 1691000000 --samplerate 2048000 --gain 45 --bias'"
         subprocess.Popen(cmd, shell=True)
     elif action == "start_align":
-        # RTL TCP
         subprocess.Popen("tmux new-session -d -s alignment 'rtl_tcp -a 0.0.0.0'", shell=True)
     elif action == "start_sync":
-        # iCloud Sync
         cmd = f"tmux new-session -d -s sat-sync 'while true; do rclone sync {IMAGE_DIR} iclouddrive:SatImages -P; sleep 300; done'"
         subprocess.Popen(cmd, shell=True)
     elif action == "stop":
         subprocess.Popen(f"tmux kill-session -t {data.get('target')}", shell=True)
-        
     return jsonify({"status": "ok"})
 
 @app.route('/images/<path:filename>')

@@ -4,64 +4,88 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dubai Ground Station</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #000000; --card: #1c1c1e; --text: #ffffff; --sub: #8e8e93;
-            --accent: #0a84ff; --success: #30d158; --danger: #ff453a; --border: #38383a;
+            /* SLATE BLUE THEME (Neutral, Pi-hole style) */
+            --bg: #0f172a;       /* Dark Slate Background */
+            --card: #1e293b;     /* Lighter Slate Panel */
+            --border: #334155;   /* Border Line */
+            --text: #f1f5f9;     /* White/Grey Text */
+            --sub: #94a3b8;      /* Dim Text */
+            --accent: #3b82f6;   /* Royal Blue */
+            --success: #10b981;  /* Green */
+            --danger: #ef4444;   /* Red */
         }
-        body { margin: 0; font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 20px; }
-        .container { max-width: 900px; margin: 0 auto; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); padding-bottom: 50px; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
         /* HEADER */
-        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
-        h1 { font-size: 1.8rem; font-weight: 700; margin: 0; letter-spacing: -0.5px; }
-        .clock { font-family: 'JetBrains Mono'; font-size: 1.2rem; color: var(--sub); }
-        .gear-btn { font-size: 1.5rem; cursor: pointer; transition: transform 0.3s; }
-        .gear-btn:hover { transform: rotate(90deg); color: var(--accent); }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border); padding-bottom: 20px; }
+        h1 { font-size: 1.5rem; font-weight: 700; margin: 0; color: var(--text); }
+        .clock { font-family: 'JetBrains Mono'; color: var(--sub); }
+        .gear-btn { font-size: 1.2rem; cursor: pointer; color: var(--sub); }
+        .gear-btn:hover { color: var(--accent); }
+
+        /* HERO IMAGE */
+        #hero-section { display: none; width: 100%; height: 350px; background-size: cover; background-position: center; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border); position: relative; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+        .hero-overlay { position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px; background: linear-gradient(transparent, rgba(15, 23, 42, 0.9)); border-radius: 0 0 12px 12px; }
 
         /* CARDS */
-        .card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); }
-        .card-header { text-transform: uppercase; font-size: 0.75rem; color: var(--sub); font-weight: 600; margin-bottom: 15px; letter-spacing: 1px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .card { background: var(--card); border-radius: 8px; padding: 20px; border: 1px solid var(--border); }
+        .card-header { font-size: 0.8rem; text-transform: uppercase; color: var(--sub); font-weight: 600; margin-bottom: 15px; letter-spacing: 0.5px; }
 
         /* METRICS */
-        .metrics-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-        .metric { display: flex; flex-direction: column; }
-        .metric-val { font-size: 2rem; font-weight: 600; font-family: 'JetBrains Mono'; }
-        .metric-label { font-size: 0.9rem; color: var(--sub); margin-top: 5px; }
+        .metric-row { display: flex; justify-content: space-between; align-items: flex-end; }
+        .big-val { font-size: 2.2rem; font-weight: 700; font-family: 'JetBrains Mono'; line-height: 1; }
+        .sub-val { font-size: 0.9rem; color: var(--sub); margin-top: 5px; }
+        .detail-row { margin-top: 15px; font-size: 0.85rem; color: var(--sub); display: flex; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; }
 
         /* TASKS */
-        .task-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
-        .task-item:last-child { border: none; }
-        .task-name { font-weight: 500; display: flex; align-items: center; gap: 10px; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #3a3a3c; }
-        .dot.active { background: var(--success); box-shadow: 0 0 8px var(--success); }
-        
-        button { background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px 16px; border-radius: 18px; font-weight: 500; cursor: pointer; transition: 0.2s; }
-        button:hover { background: var(--accent); }
-        .btn-stop { background: rgba(255, 69, 58, 0.2); color: var(--danger); }
+        .task-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .task-row:last-child { border: none; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #475569; display: inline-block; margin-right: 10px; }
+        .status-dot.active { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        button { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 5px 12px; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+        button:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-stop { border-color: var(--danger); color: var(--danger); }
         .btn-stop:hover { background: var(--danger); color: white; }
 
-        /* APPLE CALENDAR STYLE */
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .month-label { font-size: 1.2rem; font-weight: 600; }
-        .cal-nav { display: flex; gap: 10px; }
+        /* --- THE MEGA CALENDAR --- */
+        .cal-nav-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .view-select { background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 5px; border-radius: 4px; }
         
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; }
-        .cal-head { font-size: 0.8rem; color: var(--sub); padding-bottom: 10px; font-weight: 600; }
-        .cal-day { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; position: relative; font-size: 0.9rem; }
-        .cal-day:hover { background: #3a3a3c; }
-        .cal-day.today { background: var(--accent); color: white; }
-        .cal-day.has-data::after { content: ''; width: 4px; height: 4px; background: var(--sub); border-radius: 50%; margin-top: 2px; }
-        .cal-day.today.has-data::after { background: white; }
+        /* General Grid for Month/Year */
+        .cal-grid { display: grid; gap: 5px; }
+        .cal-cell { background: rgba(255,255,255,0.03); border-radius: 4px; padding: 10px; cursor: pointer; min-height: 40px; position: relative; }
+        .cal-cell:hover { background: var(--accent); color: white; }
+        .cal-cell.empty { background: transparent; cursor: default; }
+        .cal-cell.has-data::after { content: ''; position: absolute; bottom: 5px; right: 5px; width: 6px; height: 6px; background: var(--success); border-radius: 50%; }
 
-        /* MODAL */
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 100; justify-content: center; align-items: center; }
-        .modal-box { background: var(--card); padding: 30px; border-radius: 16px; width: 90%; max-width: 500px; border: 1px solid var(--border); }
-        .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid var(--border); }
-        .setting-val { font-family: 'JetBrains Mono'; color: var(--accent); }
-        
-        .link-box { background: black; padding: 10px; border-radius: 8px; font-family: 'JetBrains Mono'; font-size: 0.8rem; word-break: break-all; margin-top: 10px; color: var(--accent); border: 1px solid var(--border); }
+        /* Day View List */
+        .day-list { display: flex; flex-direction: column; gap: 10px; }
+        .day-item { background: rgba(255,255,255,0.03); padding: 15px; border-radius: 6px; display: flex; align-items: center; gap: 15px; cursor: pointer; border: 1px solid transparent; }
+        .day-item:hover { border-color: var(--accent); }
+        .day-thumb { width: 80px; height: 60px; object-fit: cover; border-radius: 4px; }
+
+        /* Week View Columns */
+        .week-cols { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+        .week-col { background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; min-height: 200px; }
+        .week-header { text-align: center; margin-bottom: 10px; font-weight: bold; color: var(--sub); border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+
+        /* ALL FILES GRID */
+        .files-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 15px; }
+        .file-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; overflow: hidden; cursor: pointer; }
+        .file-card img { width: 100%; height: 80px; object-fit: cover; }
+        .file-info { padding: 5px; font-size: 0.7rem; color: var(--sub); }
+
+        /* MODALS */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { max-width: 90%; max-height: 90vh; text-align: center; position: relative; }
+        .modal img { max-width: 100%; max-height: 80vh; border-radius: 4px; }
+        .close-modal { position: absolute; top: -30px; right: 0; color: white; cursor: pointer; font-size: 1.5rem; }
+
     </style>
 </head>
 <body>
@@ -69,123 +93,170 @@
 <div class="container">
     <header>
         <div>
-            <h1>Ground Station</h1>
-            <div style="color: var(--sub);">Electro-L5 // 76°E</div>
+            <h1>Mission Control</h1>
+            <div style="color: var(--sub); font-size: 0.9rem;">Dubai Station // Electro-L5</div>
         </div>
-        <div style="display:flex; gap: 15px; align-items: center;">
+        <div style="display:flex; gap:15px; align-items:center;">
             <div class="clock" id="clock">--:--</div>
-            <div class="gear-btn" onclick="openModal('settings')">⚙️</div>
+            <div class="gear-btn" onclick="openSettings()">⚙️</div>
         </div>
     </header>
 
-    <div class="card">
-        <div class="card-header">Vitals & Orbit</div>
-        <div class="metrics-row">
-            <div class="metric">
-                <span class="metric-val" id="next-pass-display">--:--</span>
-                <span class="metric-label" id="next-pass-countdown">Calculating...</span>
+    <div id="hero-section">
+        <div class="hero-overlay">
+            <h3 style="margin:0; color:white;">Latest Capture</h3>
+            <div style="color:rgba(255,255,255,0.8); font-size:0.9rem;" id="hero-date">--</div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="card-header">Next Acquisition</div>
+            <div class="metric-row">
+                <div class="big-val" id="pass-relative">--h --m</div>
+                <div class="sub-val" id="pass-absolute">at --:--</div>
             </div>
-            <div class="metric">
-                <span class="metric-val" id="temp-display">--°</span>
-                <span class="metric-label">Core Temperature</span>
+            <div class="detail-row">
+                <span>Target: 76°E (HRIT)</span>
+                <span style="color:var(--accent)">Scheduled</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Storage</div>
+            <div class="metric-row">
+                <div class="big-val" id="disk-percent">--%</div>
+            </div>
+            <div class="detail-row">
+                <span id="disk-details">-- GB / -- GB</span>
+                <span>SD Card</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">System Health</div>
+            <div class="metric-row">
+                <div class="big-val" id="temp">--°</div>
+            </div>
+            <div class="detail-row">
+                <span>Core Temp</span>
+                <span style="color:var(--success)">Nominal</span>
             </div>
         </div>
     </div>
 
-    <div class="card">
+    <div class="card" style="margin-bottom: 25px;">
         <div class="card-header">Active Processes</div>
-        
-        <div class="task-item">
-            <div class="task-name"><div class="dot" id="dot-align"></div> RTL-TCP (Alignment)</div>
-            <button id="btn-align" onclick="toggleTask('align')">Start</button>
-        </div>
-
-        <div class="task-item">
-            <div class="task-name"><div class="dot" id="dot-capture"></div> SatDump (HRIT Capture)</div>
-            <button id="btn-capture" onclick="toggleTask('capture')">Start</button>
-        </div>
-
-        <div class="task-item">
-            <div class="task-name"><div class="dot" id="dot-sync"></div> iCloud Sync (Rclone)</div>
-            <button id="btn-sync" onclick="toggleTask('sync')">Start</button>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap:10px; margin-bottom:0;">
+            <div class="task-row">
+                <div><span class="status-dot" id="dot-align"></span> RTL-TCP</div>
+                <button id="btn-align" onclick="toggleTask('align')">Start</button>
+            </div>
+            <div class="task-row">
+                <div><span class="status-dot" id="dot-capture"></span> SatDump</div>
+                <button id="btn-capture" onclick="toggleTask('capture')">Start</button>
+            </div>
+            <div class="task-row">
+                <div><span class="status-dot" id="dot-sync"></span> iCloud Sync</div>
+                <button id="btn-sync" onclick="toggleTask('sync')">Start</button>
+            </div>
         </div>
     </div>
 
     <div class="card">
-        <div class="calendar-header">
-            <span class="month-label" id="cal-month-year">February 2026</span>
-            <div class="cal-nav">
-                <button onclick="changeMonth(-1)">←</button>
-                <button onclick="changeMonth(1)">→</button>
+        <div class="cal-nav-bar">
+            <div>
+                <button onclick="calBack()">← Back</button>
+                <span id="cal-title" style="font-weight:bold; margin:0 15px;">2026</span>
+            </div>
+            <div>
+                <select id="view-select" class="view-select" onchange="changeView(this.value)">
+                    <option value="year">Year</option>
+                    <option value="month" selected>Month</option>
+                    <option value="week">Week</option>
+                    <option value="day">Day</option>
+                </select>
+                <button style="margin-left:10px; border-color:var(--accent); color:var(--accent)" onclick="playContextTimelapse()">▶ Play Timelapse</button>
             </div>
         </div>
-        <div class="cal-grid" id="calendar-grid">
+        
+        <div id="cal-container">
             </div>
     </div>
+
+    <div class="card">
+        <div class="card-header">All Files Archive</div>
+        <div class="files-grid" id="files-grid">
+            </div>
+    </div>
+
 </div>
 
-<div class="modal" id="settings-modal" onclick="if(event.target==this) closeModal('settings')">
-    <div class="modal-box">
-        <h2 style="margin-top:0">Settings</h2>
-        
-        <div class="setting-row">
-            <span>Time Format</span>
-            <button onclick="toggleSetting('use24h')"><span id="set-time-fmt">24h</span></button>
+<div class="modal" id="viewer-modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeModal()">×</span>
+        <img id="modal-img" src="">
+        <div style="margin-top:10px; color:white;">
+            <span id="modal-counter"></span>
+            <br>
+            <button onclick="stopSlideshow()">Stop</button>
         </div>
-        
-        <div class="setting-row">
-            <span>Temperature Unit</span>
-            <button onclick="toggleSetting('useFahrenheit')"><span id="set-temp-unit">°C</span></button>
-        </div>
-
-        <div style="margin-top: 20px;">
-            <div class="card-header">Secure Share Link</div>
-            <div class="link-box" id="tunnel-link">Loading...</div>
-            <div style="font-size:0.8rem; color:var(--sub); margin-top:5px">Share this link to access remotely.</div>
-        </div>
-
-        <button style="width:100%; margin-top:20px; background:white; color:black" onclick="closeModal('settings')">Done</button>
     </div>
 </div>
 
 <script>
-    // --- STATE & SETTINGS ---
-    let settings = {
-        use24h: localStorage.getItem('use24h') === 'true',
-        useFahrenheit: localStorage.getItem('useFahrenheit') === 'true'
-    };
-
+    // --- STATE ---
+    let allFiles = []; // {name, ts, size_mb}
+    let view = 'month'; // year, month, week, day
     let currentDate = new Date();
-    let dataDates = []; // Stores dates with images
+    let slideshowInterval = null;
 
-    // --- CORE LOOP ---
-    async function update() {
+    // --- INIT ---
+    async function loadData() {
+        // Load Files
+        const fRes = await fetch('/api/files');
+        allFiles = await fRes.json();
+
+        // Update Hero
+        if(allFiles.length > 0) {
+            const latest = allFiles[0];
+            const hero = document.getElementById('hero-section');
+            hero.style.display = 'block';
+            hero.style.backgroundImage = `url('/images/${latest.name}')`;
+            document.getElementById('hero-date').innerText = new Date(latest.ts * 1000).toLocaleString();
+        }
+
+        // Render All Files Grid
+        renderFilesGrid();
+
+        // Render Calendar
+        renderCalendar();
+    }
+
+    async function updateMetrics() {
         const res = await fetch('/api/data');
         const data = await res.json();
 
-        // Pass Timer
-        const pass = data.next_pass;
-        document.getElementById('next-pass-display').innerText = settings.use24h ? pass.absolute : convertTo12h(pass.absolute);
-        document.getElementById('next-pass-countdown').innerText = `T-Minus ${pass.relative}`;
+        // Timer
+        document.getElementById('pass-relative').innerText = data.next_pass.relative;
+        document.getElementById('pass-absolute').innerText = "at " + data.next_pass.absolute;
 
+        // Disk
+        document.getElementById('disk-percent').innerText = data.system.disk.percent + "%";
+        document.getElementById('disk-details').innerText = `${data.system.disk.used_gb} GB / ${data.system.disk.total_gb} GB`;
+        
         // Temp
-        let temp = data.system.temp;
-        if(settings.useFahrenheit) temp = (temp * 9/5) + 32;
-        document.getElementById('temp-display').innerText = Math.round(temp) + (settings.useFahrenheit ? "°F" : "°C");
-
-        // Tunnel
-        document.getElementById('tunnel-link').innerText = data.system.tunnel_url;
+        document.getElementById('temp').innerText = data.system.temp + "°C";
 
         // Tasks
-        updateTaskBtn('align', data.tasks.align);
-        updateTaskBtn('capture', data.tasks.capture);
-        updateTaskBtn('sync', data.tasks.sync);
+        setTaskBtn('align', data.tasks.align);
+        setTaskBtn('capture', data.tasks.capture);
+        setTaskBtn('sync', data.tasks.sync);
     }
 
-    function updateTaskBtn(name, active) {
-        const dot = document.getElementById(`dot-${name}`);
+    function setTaskBtn(name, active) {
+        document.getElementById(`dot-${name}`).className = active ? "status-dot active" : "status-dot";
         const btn = document.getElementById(`btn-${name}`);
-        dot.className = active ? "dot active" : "dot";
         btn.innerText = active ? "Stop" : "Start";
         btn.className = active ? "btn-stop" : "";
         btn.onclick = () => control(active ? "stop" : `start_${name}`, name);
@@ -196,96 +267,185 @@
             method: 'POST', headers: {'Content-Type':'application/json'},
             body: JSON.stringify({action, target: target==='sync'?'sat-sync':(target==='align'?'alignment':'capture')})
         });
-        setTimeout(update, 500);
+        setTimeout(updateMetrics, 500);
     }
 
     // --- CALENDAR LOGIC ---
-    async function initCalendar() {
-        const res = await fetch('/api/calendar');
-        dataDates = await res.json();
-        renderCalendar();
-    }
-
     function renderCalendar() {
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        
-        document.getElementById('cal-month-year').innerText = 
-            new Date(year, month).toLocaleString('default', { month: 'long', year: 'numeric' });
+        const container = document.getElementById('cal-container');
+        const title = document.getElementById('cal-title');
+        container.innerHTML = ''; // Clear
 
-        const firstDay = new Date(year, month, 1).getDay(); // 0 = Sun
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        
-        const grid = document.getElementById('calendar-grid');
-        grid.innerHTML = `
-            <div class="cal-head">SUN</div><div class="cal-head">MON</div><div class="cal-head">TUE</div>
-            <div class="cal-head">WED</div><div class="cal-head">THU</div><div class="cal-head">FRI</div><div class="cal-head">SAT</div>
-        `;
-
-        // Empty slots
-        for(let i=0; i<firstDay; i++) {
-            grid.innerHTML += `<div></div>`;
+        // 1. YEAR VIEW
+        if(view === 'year') {
+            title.innerText = currentDate.getFullYear();
+            container.style.display = 'grid';
+            container.style.gridTemplateColumns = 'repeat(4, 1fr)';
+            container.style.gap = '10px';
+            
+            for(let m=0; m<12; m++) {
+                const monthName = new Date(currentDate.getFullYear(), m).toLocaleString('default', {month:'long'});
+                const div = document.createElement('div');
+                div.className = 'cal-cell';
+                div.innerHTML = `<strong>${monthName}</strong>`;
+                
+                // Check data
+                if(hasData(currentDate.getFullYear(), m)) div.classList.add('has-data');
+                
+                div.onclick = () => {
+                    currentDate.setMonth(m);
+                    changeView('month');
+                };
+                container.appendChild(div);
+            }
         }
 
-        // Days
-        const today = new Date();
-        for(let d=1; d<=daysInMonth; d++) {
-            let className = "cal-day";
-            let dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        // 2. MONTH VIEW
+        else if(view === 'month') {
+            title.innerText = currentDate.toLocaleString('default', {month:'long', year:'numeric'});
+            container.style.display = 'grid';
+            container.style.gridTemplateColumns = 'repeat(7, 1fr)';
             
-            if(year === today.getFullYear() && month === today.getMonth() && d === today.getDate()) {
-                className += " today";
-            }
-            if(dataDates.includes(dateStr)) {
-                className += " has-data";
-            }
+            const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
+            const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth()+1, 0).getDate();
 
-            grid.innerHTML += `<div class="${className}">${d}</div>`;
+            // Headers
+            ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => container.innerHTML += `<div style="text-align:center; color:#94a3b8; font-size:0.8rem; padding:5px;">${d}</div>`);
+            
+            // Empty
+            for(let i=0; i<firstDay; i++) container.innerHTML += `<div></div>`;
+
+            // Days
+            for(let d=1; d<=daysInMonth; d++) {
+                const div = document.createElement('div');
+                div.className = 'cal-cell';
+                div.innerText = d;
+                if(hasData(currentDate.getFullYear(), currentDate.getMonth(), d)) div.classList.add('has-data');
+                div.onclick = () => {
+                    if(div.classList.contains('has-data')) {
+                        currentDate.setDate(d);
+                        changeView('day');
+                    } else {
+                        alert("No images for this day.");
+                    }
+                };
+                container.appendChild(div);
+            }
+        }
+
+        // 3. DAY VIEW (List)
+        else if(view === 'day') {
+            title.innerText = currentDate.toDateString();
+            container.style.display = 'flex';
+            container.style.flexDirection = 'column';
+            container.style.gap = '10px';
+
+            const dayFiles = getFilesForDate(currentDate);
+            if(dayFiles.length === 0) container.innerHTML = '<div style="color:#94a3b8; text-align:center;">No Images</div>';
+            
+            dayFiles.forEach(f => {
+                const div = document.createElement('div');
+                div.className = 'day-item';
+                div.innerHTML = `
+                    <img src="/images/${f.name}" class="day-thumb">
+                    <div>
+                        <div style="font-weight:bold">${new Date(f.ts*1000).toLocaleTimeString()}</div>
+                        <div style="font-size:0.8rem; color:#94a3b8;">${f.size_mb} MB</div>
+                    </div>
+                `;
+                div.onclick = () => openViewer(f.name);
+                container.appendChild(div);
+            });
         }
     }
 
-    function changeMonth(dir) {
-        currentDate.setMonth(currentDate.getMonth() + dir);
+    // --- HELPERS ---
+    function hasData(year, month, day=null) {
+        return allFiles.some(f => {
+            const d = new Date(f.ts * 1000);
+            if(day) return d.getFullYear() === year && d.getMonth() === month && d.getDate() === day;
+            return d.getFullYear() === year && d.getMonth() === month;
+        });
+    }
+
+    function getFilesForDate(date) {
+        return allFiles.filter(f => {
+            const d = new Date(f.ts * 1000);
+            return d.toDateString() === date.toDateString();
+        });
+    }
+
+    function changeView(newView) {
+        view = newView;
+        document.getElementById('view-select').value = newView;
         renderCalendar();
     }
 
-    // --- SETTINGS LOGIC ---
-    function openModal(id) { document.getElementById(id+'-modal').style.display = 'flex'; }
-    function closeModal(id) { document.getElementById(id+'-modal').style.display = 'none'; }
-
-    function toggleSetting(key) {
-        settings[key] = !settings[key];
-        localStorage.setItem(key, settings[key]);
-        renderSettingsUI();
-        update(); // Refresh data immediately
+    function calBack() {
+        if(view === 'day') changeView('month');
+        else if(view === 'month') changeView('year');
     }
 
-    function renderSettingsUI() {
-        document.getElementById('set-time-fmt').innerText = settings.use24h ? "24h" : "12h";
-        document.getElementById('set-temp-unit').innerText = settings.useFahrenheit ? "°F" : "°C";
+    function renderFilesGrid() {
+        const grid = document.getElementById('files-grid');
+        grid.innerHTML = allFiles.map(f => `
+            <div class="file-card" onclick="openViewer('${f.name}')">
+                <img src="/images/${f.name}">
+                <div class="file-info">${new Date(f.ts*1000).toLocaleDateString()}</div>
+            </div>
+        `).join('');
     }
 
-    function convertTo12h(timeStr) {
-        if(timeStr === "--:--") return "--:--";
-        let [h, m] = timeStr.split(':');
-        h = parseInt(h);
-        const ampm = h >= 12 ? 'PM' : 'AM';
-        h = h % 12;
-        h = h ? h : 12; 
-        return `${h}:${m} ${ampm}`;
+    // --- TIMELAPSE / VIEWER ---
+    function openViewer(imgName) {
+        const modal = document.getElementById('viewer-modal');
+        modal.style.display = 'flex';
+        document.getElementById('modal-img').src = `/images/${imgName}`;
     }
 
-    // --- INIT ---
+    function closeModal() {
+        document.getElementById('viewer-modal').style.display = 'none';
+        stopSlideshow();
+    }
+
+    function playContextTimelapse() {
+        // Filter files based on current view context
+        let playlist = [];
+        if(view === 'day') playlist = getFilesForDate(currentDate);
+        else if(view === 'month') playlist = allFiles.filter(f => {
+            const d = new Date(f.ts*1000);
+            return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear();
+        });
+        else playlist = allFiles; // Year/All
+
+        if(playlist.length === 0) return alert("No images to play.");
+        
+        // Start Slideshow
+        const modal = document.getElementById('viewer-modal');
+        modal.style.display = 'flex';
+        let idx = playlist.length - 1; // Start from oldest
+        
+        slideshowInterval = setInterval(() => {
+            if(idx < 0) { stopSlideshow(); return; }
+            document.getElementById('modal-img').src = `/images/${playlist[idx].name}`;
+            document.getElementById('modal-counter').innerText = ` Playing... (${idx+1} remaining)`;
+            idx--;
+        }, 200); // Speed
+    }
+
+    function stopSlideshow() {
+        if(slideshowInterval) clearInterval(slideshowInterval);
+        document.getElementById('modal-counter').innerText = "";
+    }
+
     setInterval(() => {
-        const now = new Date();
-        let timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: !settings.use24h});
-        document.getElementById('clock').innerText = timeStr;
+        document.getElementById('clock').innerText = new Date().toLocaleTimeString();
     }, 1000);
 
-    renderSettingsUI();
-    initCalendar();
-    update();
-    setInterval(update, 5000);
+    // Start
+    loadData();
+    updateMetrics();
+    setInterval(updateMetrics, 5000); // Live data polling
 </script>
 </body>
 </html>
