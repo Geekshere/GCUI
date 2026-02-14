@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELECTRO-L5 // MISSION COMMAND</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00ff41; 
+            --dim: #004411;
+            --danger: #ff0055;
+            --bg: #050505;
+            --panel: rgba(20, 20, 20, 0.95);
+            --scanline: rgba(0, 255, 65, 0.05);
+        }
+        body {
+            background-color: var(--bg);
+            color: var(--primary);
+            font-family: 'Share Tech Mono', monospace;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+            background-image: linear-gradient(0deg, transparent 24%, var(--scanline) 25%, var(--scanline) 26%, transparent 27%, transparent 74%, var(--scanline) 75%, var(--scanline) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, var(--scanline) 25%, var(--scanline) 26%, transparent 27%, transparent 74%, var(--scanline) 75%, var(--scanline) 76%, transparent 77%, transparent);
+            background-size: 50px 50px;
+        }
+
+        /* --- BACKGROUND CLI ANIMATION --- */
+        #bg-cli {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            opacity: 0.15;
+            pointer-events: none;
+            overflow: hidden;
+            font-size: 12px;
+            padding: 20px;
+            white-space: pre;
+        }
+
+        /* --- LAYOUT --- */
+        h1 { 
+            text-align: center; 
+            border: 1px solid var(--primary); 
+            padding: 10px; 
+            box-shadow: 0 0 15px var(--dim);
+            text-shadow: 0 0 10px var(--primary);
+            background: rgba(0,0,0,0.8);
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--primary);
+            padding: 20px;
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+        .panel::before {
+            content: "SYSTEM_MODULE";
+            position: absolute;
+            top: -10px; left: 10px;
+            background: var(--bg);
+            padding: 0 5px;
+            font-size: 0.8em;
+            color: var(--primary);
+        }
+
+        /* --- WIDGETS --- */
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .stat-box { 
+            border: 1px solid #333; padding: 10px; text-align: center; cursor: pointer; transition: 0.2s;
+        }
+        .stat-box:hover { background: var(--dim); border-color: var(--primary); }
+        .stat-val { font-size: 1.8em; font-weight: bold; }
+        .stat-label { font-size: 0.7em; opacity: 0.7; }
+
+        /* --- INTERACTIVE SWITCHES (Fidgets) --- */
+        .switch-bank {
+            display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;
+        }
+        .toggle-btn {
+            background: #111; border: 1px solid #444; color: #666;
+            padding: 5px 10px; font-family: inherit; cursor: pointer; font-size: 0.8em;
+        }
+        .toggle-btn.active {
+            background: var(--dim); border-color: var(--primary); color: var(--primary);
+            box-shadow: 0 0 8px var(--primary);
+        }
+
+        /* --- BUTTONS --- */
+        .btn {
+            width: 100%; padding: 15px; margin-bottom: 10px;
+            background: rgba(0,0,0,0.5); border: 1px solid var(--primary);
+            color: var(--primary); font-family: inherit; font-size: 1.1em;
+            cursor: pointer; text-transform: uppercase; transition: 0.2s;
+        }
+        .btn:hover { background: var(--primary); color: black; box-shadow: 0 0 15px var(--primary); }
+        .btn-danger { border-color: var(--danger); color: var(--danger); }
+        .btn-danger:hover { background: var(--danger); color: white; box-shadow: 0 0 15px var(--danger); }
+
+        /* --- FILE EXPLORER MODAL --- */
+        #file-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 100;
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            width: 80%; max-width: 600px; height: 70%;
+            background: #111; border: 2px solid var(--primary);
+            padding: 20px; overflow-y: auto;
+            box-shadow: 0 0 30px var(--dim);
+        }
+        .file-item {
+            padding: 8px; border-bottom: 1px solid #333; display: flex; justify-content: space-between;
+        }
+        .file-item:hover { background: var(--dim); }
+
+        /* --- COUNTDOWN --- */
+        #countdown { font-size: 3em; text-align: center; text-shadow: 0 0 10px var(--primary); }
+        
+        img { max-width: 100%; border: 1px solid #333; }
+    </style>
+</head>
+<body>
+
+    <div id="bg-cli"></div> <h1>DUBAI GROUND STATION // <span style="font-size:0.6em">SECURE LINK</span></h1>
+
+    <div class="dashboard">
+        
+        <div class="panel">
+            <h3 style="margin-top:0">ACQUISITION TIMER</h3>
+            <div id="countdown">--:--:--</div>
+            <div style="text-align:center; opacity:0.7">NEXT PASS: 13:42 GST</div>
+            <br>
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <div class="stat-val" id="cpu-temp">--°C</div>
+                    <div class="stat-label">CORE TEMP</div>
+                </div>
+                <div class="stat-box" onclick="openFileExplorer()">
+                    <div class="stat-val" id="disk-percent" style="font-size:1.2em">--%</div>
+                    <div class="stat-label" id="disk-detail">-- GB / -- GB</div>
+                    <div class="stat-label" style="color:var(--primary)">[VIEW FILES]</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3 style="margin-top:0">SYSTEM CONTROL</h3>
+            
+            <div class="switch-bank">
+                <button class="toggle-btn" onclick="toggleSwitch(this)">LNA PWR</button>
+                <button class="toggle-btn" onclick="toggleSwitch(this)">AUTO-TRACK</button>
+                <button class="toggle-btn" onclick="toggleSwitch(this)">ENCRYPTION</button>
+                <button class="toggle-btn active" onclick="toggleSwitch(this)">DATA LINK</button>
+            </div>
+
+            <div style="margin-bottom: 15px; display:flex; justify-content: space-between;">
+                <div><span id="led-sync" style="color:#333">●</span> CLOUD SYNC</div>
+                <div><span id="led-align" style="color:#333">●</span> RADIO ALIGN</div>
+                <div><span id="led-capture" style="color:#333">●</span> HRIT CAPTURE</div>
+            </div>
+            
+            <button class="btn" onclick="sendCommand('start_sync')">INITIATE CLOUD SYNC</button>
+            <button class="btn" onclick="sendCommand('start_align')">ENABLE ALIGNMENT (1693 MHz)</button>
+            <button class="btn" onclick="sendCommand('start_capture')">START CAPTURE SEQUENCE</button>
+            <button class="btn btn-danger" onclick="sendCommand('stop_all')">EMERGENCY SCRAM</button>
+        </div>
+
+        <div class="panel">
+            <h3 style="margin-top:0">DOWNLINK PREVIEW</h3>
+            <img id="latest-image" src="" alt="AWAITING SIGNAL...">
+            <div id="image-timestamp" style="text-align: center; margin-top: 5px; font-size: 0.8em">NO DATA</div>
+        </div>
+    </div>
+
+    <div id="file-modal" onclick="if(event.target == this) this.style.display='none'">
+        <div class="modal-content">
+            <h3 style="margin-top:0; border-bottom:1px solid var(--primary)">DATA STORAGE UNIT</h3>
+            <div id="file-list">Loading...</div>
+            <button class="btn" style="margin-top:20px" onclick="document.getElementById('file-modal').style.display='none'">CLOSE</button>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. THE BACKGROUND CLI EFFECT ---
+        const cliLines = [
+            "INITIALIZING ORBITAL PARAMETERS...", "CHECKING TLE DATA FOR ELECTRO-L5...", "LNA GAIN SET TO 45dB...",
+            "CONNECTING TO 1691.0 MHZ...", "SYNC ESTABLISHED...", "DECODING PACKET STREAM...",
+            "TEMP CHECK: NOMINAL...", "RCLONE SYNC: ACTIVE...", "BUFFER CLEAR...", "WAITING FOR BURST..."
+        ];
+        const bgCli = document.getElementById('bg-cli');
+        let lineIdx = 0;
+        
+        setInterval(() => {
+            const line = document.createElement('div');
+            line.innerText = "> " + cliLines[Math.floor(Math.random() * cliLines.length)] + " [" + Math.random().toString(16).substr(2, 4) + "]";
+            bgCli.appendChild(line);
+            if (bgCli.children.length > 20) bgCli.removeChild(bgCli.firstChild);
+        }, 800);
+
+        // --- 2. INTERACTIVE SWITCHES ---
+        function toggleSwitch(btn) {
+            btn.classList.toggle('active');
+            // Plays a fake sound logic here if you wanted
+        }
+
+        // --- 3. COUNTDOWN ---
+        function updateCountdown() {
+            const now = new Date();
+            const target = new Date();
+            target.setHours(13, 42, 0, 0);
+            if (now > target) target.setDate(target.getDate() + 1);
+            
+            const diff = target - now;
+            const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+            const m = Math.floor((diff / (1000 * 60)) % 60);
+            const s = Math.floor((diff / 1000) % 60);
+            document.getElementById("countdown").innerText = 
+                `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+        }
+        setInterval(updateCountdown, 1000);
+
+        // --- 4. STATUS UPDATER ---
+        async function updateStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+                
+                // Hardware
+                document.getElementById('cpu-temp').innerText = data.cpu_temp + "°C";
+                document.getElementById('disk-percent').innerText = data.disk.percent + "% USED";
+                document.getElementById('disk-detail').innerText = `${data.disk.used} GB / ${data.disk.total} GB`;
+
+                // LEDs
+                document.getElementById('led-sync').style.color = data.sync_status ? "var(--primary)" : "#333";
+                document.getElementById('led-sync').style.textShadow = data.sync_status ? "0 0 10px var(--primary)" : "none";
+                
+                document.getElementById('led-align').style.color = data.align_status ? "var(--primary)" : "#333";
+                document.getElementById('led-align').style.textShadow = data.align_status ? "0 0 10px var(--primary)" : "none";
+
+                document.getElementById('led-capture').style.color = data.capture_status ? "var(--danger)" : "#333";
+                document.getElementById('led-capture').style.textShadow = data.capture_status ? "0 0 10px var(--danger)" : "none";
+
+            } catch(e) {}
+        }
+        setInterval(updateStatus, 2000);
+
+        // --- 5. IMAGE GALLERY ---
+        async function updateImage() {
+            try {
+                const res = await fetch('/api/images');
+                const images = await res.json();
+                if (images.length > 0) {
+                    const latest = images[0];
+                    const imgEl = document.getElementById('latest-image');
+                    if (!imgEl.src.includes(latest)) {
+                        imgEl.src = "/images/" + latest;
+                        document.getElementById('image-timestamp').innerText = latest;
+                    }
+                }
+            } catch(e) {}
+        }
+        setInterval(updateImage, 5000);
+
+        // --- 6. FILE EXPLORER ---
+        async function openFileExplorer() {
+            const modal = document.getElementById('file-modal');
+            const list = document.getElementById('file-list');
+            modal.style.display = "flex";
+            list.innerHTML = "Scanning Storage...";
+            
+            try {
+                const res = await fetch('/api/files');
+                const files = await res.json();
+                
+                if (files.error) {
+                    list.innerHTML = "ERROR: " + files.error;
+                    return;
+                }
+                
+                list.innerHTML = "";
+                files.forEach(f => {
+                    const div = document.createElement('div');
+                    div.className = "file-item";
+                    div.innerHTML = `<span>${f.name}</span> <span style="opacity:0.6">${f.size} MB</span>`;
+                    list.appendChild(div);
+                });
+            } catch(e) { list.innerHTML = "Connection Error"; }
+        }
+
+        // --- 7. COMMANDS ---
+        async function sendCommand(action) {
+            await fetch('/api/control', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: action})
+            });
+            updateStatus();
+        }
+
+        updateStatus();
+        updateImage();
+    </script>
+</body>
+</html>
