@@ -25,7 +25,7 @@ ICLOUD_PASS = "ctaf-ktli-ilth-ewvg"
 
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
-# Electro-L Schedule
+# Satellite Schedule
 TRANSMISSION_MINUTES = [12, 42]
 
 # --- EMAIL LOGIC ---
@@ -108,10 +108,6 @@ def get_data():
     except: temp = 0
     total, used, free = shutil.disk_usage("/")
     
-    recipient = ""
-    if os.path.exists(RECIPIENT_FILE):
-        with open(RECIPIENT_FILE, 'r') as f: recipient = f.read().strip()
-    
     def check(name):
         try:
             return subprocess.run(["tmux", "has-session", "-t", name], 
@@ -126,8 +122,7 @@ def get_data():
                 "used_gb": round(used / (2**30), 1),
                 "total_gb": round(total / (2**30), 1)
             },
-            "tunnel_url": get_tunnel_url(),
-            "recipient": recipient
+            "tunnel_url": get_tunnel_url()
         },
         "next_pass": get_next_pass(),
         "tasks": {
@@ -171,7 +166,15 @@ def control():
     target = data.get('target')
 
     if action == "start_capture":
-        cmd = f"tmux new-session -d -s capture 'satdump live elektro_hrit {BASE_DIR} --source rtlsdr --frequency 1691000000 --samplerate 2048000 --gain 45 --bias'"
+        # Extract the config variables passed from the frontend modal
+        config = data.get('config', {})
+        pipeline = config.get('pipeline', 'elektro_hrit')
+        freq = config.get('freq', '1691000000')
+        samplerate = config.get('samplerate', '2048000')
+        gain = config.get('gain', '45')
+
+        # Build the dynamic command
+        cmd = f"tmux new-session -d -s capture 'satdump live {pipeline} {BASE_DIR} --source rtlsdr --frequency {freq} --samplerate {samplerate} --gain {gain} --bias'"
         subprocess.Popen(cmd, shell=True)
     elif action == "start_align":
         subprocess.Popen("tmux new-session -d -s alignment 'rtl_tcp -a 0.0.0.0'", shell=True)
@@ -199,4 +202,4 @@ def get_logs(session):
 def serve_image(filename): return send_from_directory(IMAGE_DIR, filename)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)

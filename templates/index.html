@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dubai Ground Station</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -106,7 +107,7 @@
 
 <div class="container">
     <header>
-        <div><h1>Mission Control</h1><div style="color:var(--sub); font-size:0.9rem;">Dubai Station // Electro-L5</div></div>
+        <div><h1>Mission Control</h1><div style="color:var(--sub); font-size:0.9rem;">Dubai Station // Satellite Weather Station</div></div>
         <div style="display:flex; gap:15px; align-items:center;">
             <div class="clock" id="clock">--:--</div>
             <div class="gear-btn" onclick="openModal('settings-modal')">⚙️</div>
@@ -120,7 +121,7 @@
             <div class="card-header">Next Acquisition (30 min)</div>
             <div class="metric-row"><div class="big-val" id="pass-rel">--</div><div class="sub-val" id="pass-abs">--</div></div>
             <div class="detail-row">
-                <span>Target: 76°E (HRIT)</span>
+                <span>Target: Active Satellite</span>
                 <span id="acq-status" style="color:var(--accent); font-weight:600;">Scheduled</span>
             </div>
         </div>
@@ -172,7 +173,49 @@
     <div class="modal-content" style="text-align:center;">
         <h3>Security</h3><p style="color:var(--sub)">Enter PIN to execute.</p>
         <input type="password" id="pin-input" class="pin-input" maxlength="4">
-        <button onclick="submitPin()" style="width:150px; padding:10px; background:var(--accent); border:none; color:white;">Unlock</button>
+        <button onclick="submitPin()" style="width:150px; padding:10px; background:var(--accent); border:none; color:white; border-radius:6px; cursor:pointer;">Unlock</button>
+    </div>
+</div>
+
+<div class="modal" id="config-modal">
+    <div class="modal-content" style="max-width:400px;">
+        <span class="close-modal" onclick="closeModal('config-modal')">×</span>
+        <h3>Capture Configuration</h3>
+        
+        <div class="setting-group">
+            <span class="setting-label">Select Target</span>
+            <select id="cfg-preset" class="view-select" style="width:100%; padding:10px;" onchange="loadPreset()">
+                <option value="l3_hrit">Elektro-L3 / L5 (HRIT)</option>
+                <option value="l3_ggak">Elektro-L3 / L5 (GGAK Beacon)</option>
+                <option value="fy_svissr">FengYun-2H (S-VISSR)</option>
+                <option value="fy_beacon">FengYun-2H (Beacon)</option>
+            </select>
+        </div>
+
+        <div class="setting-group">
+            <span class="setting-label">SatDump Pipeline ID</span>
+            <input type="text" id="cfg-pipeline" class="copy-input" style="width:100%; box-sizing:border-box;" value="elektro_hrit">
+        </div>
+        
+        <div class="setting-group">
+            <span class="setting-label">Frequency (Hz)</span>
+            <input type="text" id="cfg-freq" class="copy-input" style="width:100%; box-sizing:border-box;" value="1691000000">
+        </div>
+        
+        <div class="setting-group">
+            <span class="setting-label">Sample Rate</span>
+            <select id="cfg-samplerate" class="view-select" style="width:100%; padding:10px;">
+                <option value="2048000">2.048 Msps</option>
+                <option value="2400000">2.4 Msps</option>
+            </select>
+        </div>
+        
+        <div class="setting-group">
+            <span class="setting-label">Tuner Gain</span>
+            <input type="number" id="cfg-gain" class="copy-input" style="width:100%; box-sizing:border-box;" value="45">
+        </div>
+        
+        <button onclick="submitConfig()" style="width:100%; padding:10px; background:var(--accent); border:none; color:white; border-radius:6px; margin-top:10px; cursor:pointer;">Execute Command</button>
     </div>
 </div>
 
@@ -233,11 +276,27 @@
 
 <script>
     let allFiles = []; let currentDate = new Date(); let view = 'month'; let page = 0;
-    let slideshowInt = null; let pendingAction = null;
+    let slideshowInt = null; let pendingAction = null; let savedPin = "";
     let settings = { use24h: localStorage.getItem('use24h') !== 'false', useF: localStorage.getItem('useF') === 'true' };
 
+    // --- PRESET LOGIC ---
+    const satConfigs = {
+        'l3_hrit': { pipeline: 'elektro_hrit', freq: '1691000000', sr: '2048000', gain: '45' },
+        'l3_ggak': { pipeline: 'elektro_ggak', freq: '1693000000', sr: '2048000', gain: '45' },
+        'fy_svissr': { pipeline: 'fengyun_svissr', freq: '1687500000', sr: '2048000', gain: '45' },
+        'fy_beacon': { pipeline: 'fengyun_svissr', freq: '1702500000', sr: '2048000', gain: '45' }
+    };
+
+    function loadPreset() {
+        const preset = satConfigs[document.getElementById('cfg-preset').value];
+        document.getElementById('cfg-pipeline').value = preset.pipeline;
+        document.getElementById('cfg-freq').value = preset.freq;
+        document.getElementById('cfg-samplerate').value = preset.sr;
+        document.getElementById('cfg-gain').value = preset.gain;
+    }
+
     async function init() {
-        renderCalendar(); updateSettingsUI();
+        renderCalendar(); updateSettingsUI(); loadPreset(); // Load default preset on startup
         const fRes = await fetch('/api/files'); allFiles = await fRes.json();
         if(allFiles.length > 0) {
             document.getElementById('hero-section').style.display = 'block';
@@ -277,20 +336,27 @@
         if(settings.useF) t = (t * 9/5) + 32;
         document.getElementById('temp').innerText = t.toFixed(1) + (settings.useF ? "°F" : "°C");
 
-        document.getElementById('tunnel-input').value = data.system.tunnel_url;
-        document.getElementById('recipient-input').value = data.system.recipient || "";
+        // The email input is no longer updated here to prevent it from ghosting!
+        if (document.getElementById('settings-modal').style.display !== 'flex') {
+            document.getElementById('tunnel-input').value = data.system.tunnel_url;
+        }
         
         setTask('align', data.tasks.align); setTask('capture', data.tasks.capture); setTask('sync', data.tasks.sync);
     }
 
     async function saveEmail() {
-        const email = document.getElementById('recipient-input').value;
+        const emailInput = document.getElementById('recipient-input');
+        const email = emailInput.value;
+        if(!email) return;
+
         await fetch('/api/settings', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({email: email})
         });
+        
         alert("Recipient Saved!");
+        emailInput.value = ""; // Clear it out immediately
     }
 
     function setTask(name, active) {
@@ -308,17 +374,40 @@
         document.getElementById('pin-input').focus();
     }
 
-    async function submitPin() {
-        const p = document.getElementById('pin-input').value;
+    function submitPin() {
+        savedPin = document.getElementById('pin-input').value;
         document.getElementById('pin-modal').style.display = 'none';
+        
+        if (pendingAction.action === 'start_capture') {
+            openModal('config-modal');
+        } else {
+            executeControl(pendingAction.action, pendingAction.target, {});
+        }
+    }
+
+    async function submitConfig() {
+        const configData = {
+            pipeline: document.getElementById('cfg-pipeline').value,
+            freq: document.getElementById('cfg-freq').value,
+            samplerate: document.getElementById('cfg-samplerate').value,
+            gain: document.getElementById('cfg-gain').value
+        };
+        closeModal('config-modal');
+        executeControl('start_capture', 'capture', configData);
+    }
+
+    async function executeControl(action, target, configData) {
+        let targetName = target === 'sync' ? 'sat-sync' : (target === 'align' ? 'alignment' : 'capture');
         const res = await fetch('/api/control', {
             method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({action: pendingAction.action, target: pendingAction.target==='sync'?'sat-sync':(pendingAction.target==='align'?'alignment':'capture'), pin: p})
+            body: JSON.stringify({action: action, target: targetName, pin: savedPin, config: configData})
         });
         const d = await res.json();
-        if(d.status === 'error') alert("Incorrect PIN");
+        if(d.status === 'error') alert("Error: " + d.message);
         else setTimeout(updateMetrics, 500);
+        
         pendingAction = null; 
+        savedPin = ""; 
     }
 
     // --- CALENDAR ---
@@ -385,12 +474,7 @@
 
     function jumpToDay(ts) { currentDate = new Date(ts); changeView('day'); }
     function changeView(v) { view = v; document.getElementById('view-select').value = v; renderCalendar(); }
-    function navTime(dir) {
-        if(view==='month') currentDate.setMonth(currentDate.getMonth()+d);
-        if(view==='week') currentDate.setDate(currentDate.getDate()+(d*7));
-        renderCalendar();
-    }
-    // Fixed missing navTime implementation in previous copy
+    
     function navTime(d) {
         if(view==='year') currentDate.setFullYear(currentDate.getFullYear()+d);
         if(view==='month') currentDate.setMonth(currentDate.getMonth()+d);
@@ -399,7 +483,7 @@
         renderCalendar();
     }
 
-    function hasData(y, m, d=null) { return allFiles.some(f => { const t = new Date(f.ts*1000); return t.getFullYear()===y && t.getMonth()===m && (!d || dt.getDate()===d); }); }
+    function hasData(y, m, d=null) { return allFiles.some(f => { const t = new Date(f.ts*1000); return t.getFullYear()===y && t.getMonth()===m && (!d || t.getDate()===d); }); }
     function getFilesForRange(s, e) {
         const S = new Date(s); S.setHours(0,0,0,0); const E = new Date(e); E.setHours(23,59,59,999);
         return allFiles.filter(f => { const t = new Date(f.ts*1000); return t>=S && t<=E; });
