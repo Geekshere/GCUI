@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dubai Ground Station</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -118,10 +118,14 @@
 
     <div class="grid">
         <div class="card">
-            <div class="card-header">Next Acquisition (30 min)</div>
+            <div class="card-header">Next Acquisition <span id="acq-interval" style="text-transform:uppercase; color:var(--sub); font-size:0.75rem; margin-left:5px;">(--)</span></div>
             <div class="metric-row"><div class="big-val" id="pass-rel">--</div><div class="sub-val" id="pass-abs">--</div></div>
-            <div class="detail-row">
-                <span>Target: Active Satellite</span>
+            <div class="detail-row" style="align-items: center;">
+                <select id="acq-select" style="background:transparent; border:1px solid rgba(255,255,255,0.1); color:var(--text); border-radius:4px; padding:3px; outline:none; font-family:'Inter', sans-serif; font-size:0.8rem; cursor:pointer;" onchange="updateMetricsUI()">
+                    <option value="fy_svissr">Target: FengYun-2H</option>
+                    <option value="l3_hrit">Target: Elektro-L3</option>
+                    <option value="l5_hrit">Target: Elektro-L5</option>
+                </select>
                 <span id="acq-status" style="color:var(--accent); font-weight:600;">Scheduled</span>
             </div>
         </div>
@@ -185,21 +189,21 @@
         <div class="setting-group">
             <span class="setting-label">Select Target</span>
             <select id="cfg-preset" class="view-select" style="width:100%; padding:10px;" onchange="loadPreset()">
+                <option value="fy_svissr">FengYun-2H (S-VISSR)</option>
                 <option value="l3_hrit">Elektro-L3 / L5 (HRIT)</option>
                 <option value="l3_ggak">Elektro-L3 / L5 (GGAK Beacon)</option>
-                <option value="fy_svissr">FengYun-2H (S-VISSR)</option>
                 <option value="fy_beacon">FengYun-2H (Beacon)</option>
             </select>
         </div>
 
         <div class="setting-group">
             <span class="setting-label">SatDump Pipeline ID</span>
-            <input type="text" id="cfg-pipeline" class="copy-input" style="width:100%; box-sizing:border-box;" value="elektro_hrit">
+            <input type="text" id="cfg-pipeline" class="copy-input" style="width:100%; box-sizing:border-box;" value="fengyun_svissr">
         </div>
         
         <div class="setting-group">
             <span class="setting-label">Frequency (Hz)</span>
-            <input type="text" id="cfg-freq" class="copy-input" style="width:100%; box-sizing:border-box;" value="1691000000">
+            <input type="text" id="cfg-freq" class="copy-input" style="width:100%; box-sizing:border-box;" value="1687500000">
         </div>
         
         <div class="setting-group">
@@ -277,13 +281,14 @@
 <script>
     let allFiles = []; let currentDate = new Date(); let view = 'month'; let page = 0;
     let slideshowInt = null; let pendingAction = null; let savedPin = "";
+    let lastSystemData = null;
     let settings = { use24h: localStorage.getItem('use24h') !== 'false', useF: localStorage.getItem('useF') === 'true' };
 
     // --- PRESET LOGIC ---
     const satConfigs = {
+        'fy_svissr': { pipeline: 'fengyun_svissr', freq: '1687500000', sr: '2048000', gain: '45' },
         'l3_hrit': { pipeline: 'elektro_hrit', freq: '1691000000', sr: '2048000', gain: '45' },
         'l3_ggak': { pipeline: 'elektro_ggak', freq: '1693000000', sr: '2048000', gain: '45' },
-        'fy_svissr': { pipeline: 'fengyun_svissr', freq: '1687500000', sr: '2048000', gain: '45' },
         'fy_beacon': { pipeline: 'fengyun_svissr', freq: '1702500000', sr: '2048000', gain: '45' }
     };
 
@@ -296,7 +301,7 @@
     }
 
     async function init() {
-        renderCalendar(); updateSettingsUI(); loadPreset(); // Load default preset on startup
+        renderCalendar(); updateSettingsUI(); loadPreset(); 
         const fRes = await fetch('/api/files'); allFiles = await fRes.json();
         if(allFiles.length > 0) {
             document.getElementById('hero-section').style.display = 'block';
@@ -309,19 +314,46 @@
     }
 
     async function updateMetrics() {
-        const res = await fetch('/api/data'); const data = await res.json();
-        const next = data.next_pass;
-        
-        if(!settings.use24h && next.absolute !== "--:--") {
-            let [h, m] = next.absolute.split(':');
-            let ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+        try {
+            const res = await fetch('/api/data'); 
+            if(!res.ok) return; // Prevent crashes if the backend drops a request
+            lastSystemData = await res.json();
+            updateMetricsUI();
+        } catch (e) {
+            console.error("Fetch failed, keeping previous UI state.", e);
+        }
+    }
+
+    function updateMetricsUI() {
+        if(!lastSystemData || !lastSystemData.passes) return;
+
+        // --- MULTI-SATELLITE ACQUISITION UPDATE ---
+        const targetSelection = document.getElementById('acq-select').value;
+        const passInfo = lastSystemData.passes[targetSelection];
+
+        document.getElementById('acq-interval').innerText = passInfo.interval;
+
+        const now = new Date();
+        const targetDate = new Date(passInfo.ts * 1000);
+        let diffSecs = Math.floor((targetDate - now) / 1000);
+        if (diffSecs < 0) diffSecs = 0;
+        const hrs = Math.floor(diffSecs / 3600);
+        const mins = Math.floor((diffSecs % 3600) / 60);
+        document.getElementById('pass-rel').innerText = `${hrs}h ${mins}m`;
+
+        let h = targetDate.getHours();
+        let m = targetDate.getMinutes().toString().padStart(2, '0');
+        if(!settings.use24h) {
+            let ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
             document.getElementById('pass-abs').innerText = `at ${h}:${m} ${ampm}`;
-        } else { document.getElementById('pass-abs').innerText = "at " + next.absolute; }
-        
-        document.getElementById('pass-rel').innerText = next.relative;
+        } else {
+            let hStr = h.toString().padStart(2, '0');
+            document.getElementById('pass-abs').innerText = `at ${hStr}:${m}`;
+        }
 
         const statusEl = document.getElementById('acq-status');
-        if(next.is_active) {
+        if(passInfo.active) {
             statusEl.innerText = "Receiving Signal";
             statusEl.style.color = "var(--success)";
         } else {
@@ -329,19 +361,19 @@
             statusEl.style.color = "var(--accent)";
         }
 
-        document.getElementById('disk-percent').innerText = data.system.disk.percent + "%";
-        document.getElementById('disk-details').innerText = `${data.system.disk.used_gb} / ${data.system.disk.total_gb} GB`;
+        // --- SYSTEM STATS ---
+        document.getElementById('disk-percent').innerText = lastSystemData.system.disk.percent + "%";
+        document.getElementById('disk-details').innerText = `${lastSystemData.system.disk.used_gb} / ${lastSystemData.system.disk.total_gb} GB`;
 
-        let t = data.system.temp;
+        let t = lastSystemData.system.temp;
         if(settings.useF) t = (t * 9/5) + 32;
         document.getElementById('temp').innerText = t.toFixed(1) + (settings.useF ? "°F" : "°C");
 
-        // The email input is no longer updated here to prevent it from ghosting!
         if (document.getElementById('settings-modal').style.display !== 'flex') {
-            document.getElementById('tunnel-input').value = data.system.tunnel_url;
+            document.getElementById('tunnel-input').value = lastSystemData.system.tunnel_url;
         }
         
-        setTask('align', data.tasks.align); setTask('capture', data.tasks.capture); setTask('sync', data.tasks.sync);
+        setTask('align', lastSystemData.tasks.align); setTask('capture', lastSystemData.tasks.capture); setTask('sync', lastSystemData.tasks.sync);
     }
 
     async function saveEmail() {
@@ -356,7 +388,7 @@
         });
         
         alert("Recipient Saved!");
-        emailInput.value = ""; // Clear it out immediately
+        emailInput.value = ""; 
     }
 
     function setTask(name, active) {
@@ -498,8 +530,18 @@
     function renderFiles() { /* Same logic */ }
     function changePage(d) { if(page+d >= 0) { page+=d; renderFiles(); } }
 
-    function setTimeFormat(val) { settings.use24h = val; localStorage.setItem('use24h', val); updateSettingsUI(); updateMetrics(); }
-    function setTempUnit(val) { settings.useF = val; localStorage.setItem('useF', val); updateSettingsUI(); updateMetrics(); }
+    function setTimeFormat(val) { 
+        settings.use24h = val; 
+        localStorage.setItem('use24h', val); 
+        updateSettingsUI(); 
+        updateMetricsUI(); // Force immediate update of the time display
+    }
+    function setTempUnit(val) { 
+        settings.useF = val; 
+        localStorage.setItem('useF', val); 
+        updateSettingsUI(); 
+        updateMetricsUI(); 
+    }
     
     function updateSettingsUI() {
         document.getElementById('btn-12h').className = !settings.use24h ? 'toggle-btn active' : 'toggle-btn';

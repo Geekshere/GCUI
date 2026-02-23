@@ -25,9 +25,6 @@ ICLOUD_PASS = "ctaf-ktli-ilth-ewvg"
 
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
-# Satellite Schedule
-TRANSMISSION_MINUTES = [12, 42]
-
 # --- EMAIL LOGIC ---
 def send_link_email(new_url):
     try:
@@ -66,37 +63,57 @@ def tunnel_monitor():
         except: pass
         time.sleep(60)
 
-# Start Monitor
 threading.Thread(target=tunnel_monitor, daemon=True).start()
 
+# --- SATELLITE SCHEDULE LOGIC ---
+def get_passes():
+    now_utc = datetime.datetime.utcnow()
+    current_epoch = time.time()
+    passes = {}
+    
+    # 1. FY-2H: Hourly, starts at XX:00, dark 45-58
+    if now_utc.minute >= 45:
+        fy_target = (now_utc + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    else:
+        fy_target = now_utc.replace(minute=0, second=0, microsecond=0)
+    passes["fy_svissr"] = {
+        "interval": "(Hourly)",
+        "ts": current_epoch + (fy_target - now_utc).total_seconds(),
+        "active": not (45 <= now_utc.minute <= 58)
+    }
+    
+    # 2. L3: Every 3 hours at XX:12 UTC (00:12, 03:12, 06:12, etc.)
+    l3_hours = [0, 3, 6, 9, 12, 15, 18, 21]
+    t = now_utc
+    for _ in range(24):
+        if t.hour in l3_hours:
+            target_l3 = t.replace(minute=12, second=0, microsecond=0)
+            if target_l3 > now_utc or 0 <= (now_utc - target_l3).total_seconds() < 900: # 15 min active window
+                passes["l3_hrit"] = {
+                    "interval": "(Every 3 Hours)",
+                    "ts": current_epoch + (target_l3 - now_utc).total_seconds(),
+                    "active": 0 <= (now_utc - target_l3).total_seconds() < 900
+                }
+                break
+        t = (t + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+
+    # 3. L5: Every 30 mins at XX:12 and XX:42
+    target_12 = now_utc.replace(minute=12, second=0, microsecond=0)
+    target_42 = now_utc.replace(minute=42, second=0, microsecond=0)
+    targets = [target_12, target_42, (now_utc + datetime.timedelta(hours=1)).replace(minute=12, second=0, microsecond=0)]
+    
+    for tgt in targets:
+        if tgt > now_utc or 0 <= (now_utc - tgt).total_seconds() < 900:
+            passes["l5_hrit"] = {
+                "interval": "(Every 30 Min)",
+                "ts": current_epoch + (tgt - now_utc).total_seconds(),
+                "active": 0 <= (now_utc - tgt).total_seconds() < 900
+            }
+            break
+            
+    return passes
+
 # --- ROUTES ---
-
-def get_next_pass():
-    now = datetime.datetime.now()
-    for day_offset in [0, 1]:
-        base = now + datetime.timedelta(days=day_offset)
-        for hour in range(0, 24):
-            for minute in TRANSMISSION_MINUTES:
-                target = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
-                if target > now:
-                    diff = target - now
-                    hrs = int(diff.total_seconds() // 3600)
-                    mins = int((diff.total_seconds() % 3600) // 60)
-                    return {
-                        "absolute": target.strftime("%H:%M"),
-                        "relative": f"{hrs}h {mins}m",
-                        "is_active": hrs == 0 and mins < 2
-                    }
-    return {"absolute": "--:--", "relative": "--", "is_active": False}
-
-def get_tunnel_url():
-    if not os.path.exists(TUNNEL_LOG): return "Searching..."
-    try:
-        with open(TUNNEL_LOG, 'r') as f:
-            matches = re.findall(r'https://[\w-]+\.trycloudflare\.com', f.read())
-            return matches[-1] if matches else "Searching..."
-    except: return "Log Error"
-
 @app.route('/')
 def index(): return render_template('index.html')
 
@@ -113,6 +130,14 @@ def get_data():
             return subprocess.run(["tmux", "has-session", "-t", name], 
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
         except: return False
+        
+    def get_tunnel_url():
+        if not os.path.exists(TUNNEL_LOG): return "Searching..."
+        try:
+            with open(TUNNEL_LOG, 'r') as f:
+                matches = re.findall(r'https://[\w-]+\.trycloudflare\.com', f.read())
+                return matches[-1] if matches else "Searching..."
+        except: return "Log Error"
 
     return jsonify({
         "system": {
@@ -124,7 +149,7 @@ def get_data():
             },
             "tunnel_url": get_tunnel_url()
         },
-        "next_pass": get_next_pass(),
+        "passes": get_passes(),
         "tasks": {
             "sync": check("sat-sync"),
             "align": check("alignment"),
@@ -166,14 +191,11 @@ def control():
     target = data.get('target')
 
     if action == "start_capture":
-        # Extract the config variables passed from the frontend modal
         config = data.get('config', {})
         pipeline = config.get('pipeline', 'elektro_hrit')
         freq = config.get('freq', '1691000000')
         samplerate = config.get('samplerate', '2048000')
         gain = config.get('gain', '45')
-
-        # Build the dynamic command
         cmd = f"tmux new-session -d -s capture 'satdump live {pipeline} {BASE_DIR} --source rtlsdr --frequency {freq} --samplerate {samplerate} --gain {gain} --bias'"
         subprocess.Popen(cmd, shell=True)
     elif action == "start_align":
