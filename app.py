@@ -13,7 +13,7 @@ app = Flask(__name__)
 
 # --- CONFIG ---
 BASE_DIR = os.path.expanduser("~/SatDump/build/elektro_l3_output")
-IMAGE_DIR = os.path.join(BASE_DIR, "images")
+IMAGE_DIR = os.path.join(BASE_DIR, "IMAGE/")
 TUNNEL_LOG = "/home/ethan/mission_control/tunnel.log"
 LAST_LINK_FILE = "/home/ethan/mission_control/last_link.txt"
 RECIPIENT_FILE = "/home/ethan/mission_control/recipient.txt"
