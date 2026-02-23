@@ -23,7 +23,7 @@
         .gear-btn:hover { color: var(--accent); }
 
         /* HERO */
-        #hero-section { display: none; width: 100%; height: 350px; background-size: cover; background-position: center; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border); position: relative; }
+        #hero-section { display: none; width: 100%; height: 350px; background-size: cover; background-position: center; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border); position: relative; cursor: pointer; }
         .hero-overlay { position: absolute; bottom: 0; left: 0; width: 100%; padding: 20px; background: linear-gradient(transparent, rgba(15, 23, 42, 0.9)); border-radius: 0 0 12px 12px; }
 
         /* METRICS */
@@ -96,8 +96,8 @@
         .copy-btn { background: var(--card); border: 1px solid var(--border); padding: 0 15px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-        #full-img-modal .modal-content { background: transparent; border: none; text-align: center; max-width: 100%; }
-        #full-img-modal img { max-width: 95vw; max-height: 80vh; object-fit: contain; }
+        #full-img-modal .modal-content { background: transparent; border: none; text-align: center; max-width: 100%; overflow: hidden; }
+        #full-img-modal img { max-width: 95vw; max-height: 85vh; width: auto; height: auto; object-fit: contain; }
         .action-bar { margin-top: 20px; display: flex; justify-content: center; gap: 20px; }
         .icon-btn { font-size: 1.5rem; cursor: pointer; background: rgba(255,255,255,0.1); width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2); }
         .icon-btn:hover { background: var(--accent); }
@@ -114,7 +114,7 @@
         </div>
     </header>
 
-    <div id="hero-section"><div class="hero-overlay"><h3 style="margin:0; color:white;">Latest Capture</h3><div style="color:rgba(255,255,255,0.8); font-size:0.9rem;" id="hero-date">--</div></div></div>
+    <div id="hero-section" onclick="if(allFiles.length > 0) openImg(allFiles[0].name)"><div class="hero-overlay"><h3 style="margin:0; color:white;">Latest Capture</h3><div style="color:rgba(255,255,255,0.8); font-size:0.9rem;" id="hero-date">--</div></div></div>
 
     <div class="grid">
         <div class="card">
@@ -273,7 +273,7 @@
         <img id="modal-img" src="">
         <div class="action-bar">
             <div class="icon-btn" onclick="shareImg(event)">⏍</div>
-            <div class="icon-btn" onclick="stopSlideshow(event)" style="border-color:var(--danger); color:var(--danger)">⏹</div>
+            <div class="icon-btn" id="stop-btn" onclick="stopSlideshow(event)" style="border-color:var(--danger); color:var(--danger); display:none;">⏹</div>
         </div>
     </div>
 </div>
@@ -284,7 +284,6 @@
     let lastSystemData = null;
     let settings = { use24h: localStorage.getItem('use24h') !== 'false', useF: localStorage.getItem('useF') === 'true' };
 
-    // --- PRESET LOGIC ---
     const satConfigs = {
         'fy_svissr': { pipeline: 'fengyun_svissr', freq: '1687500000', sr: '2048000', gain: '45' },
         'l3_hrit': { pipeline: 'elektro_hrit', freq: '1691000000', sr: '2048000', gain: '45' },
@@ -316,23 +315,20 @@
     async function updateMetrics() {
         try {
             const res = await fetch('/api/data'); 
-            if(!res.ok) return; // Prevent crashes if the backend drops a request
+            if(!res.ok) return;
             lastSystemData = await res.json();
             updateMetricsUI();
         } catch (e) {
-            console.error("Fetch failed, keeping previous UI state.", e);
+            console.error("Fetch failed", e);
         }
     }
 
     function updateMetricsUI() {
         if(!lastSystemData || !lastSystemData.passes) return;
-
-        // --- MULTI-SATELLITE ACQUISITION UPDATE ---
         const targetSelection = document.getElementById('acq-select').value;
         const passInfo = lastSystemData.passes[targetSelection];
 
         document.getElementById('acq-interval').innerText = passInfo.interval;
-
         const now = new Date();
         const targetDate = new Date(passInfo.ts * 1000);
         let diffSecs = Math.floor((targetDate - now) / 1000);
@@ -361,7 +357,6 @@
             statusEl.style.color = "var(--accent)";
         }
 
-        // --- SYSTEM STATS ---
         document.getElementById('disk-percent').innerText = lastSystemData.system.disk.percent + "%";
         document.getElementById('disk-details').innerText = `${lastSystemData.system.disk.used_gb} / ${lastSystemData.system.disk.total_gb} GB`;
 
@@ -380,15 +375,8 @@
         const emailInput = document.getElementById('recipient-input');
         const email = emailInput.value;
         if(!email) return;
-
-        await fetch('/api/settings', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({email: email})
-        });
-        
-        alert("Recipient Saved!");
-        emailInput.value = ""; 
+        await fetch('/api/settings', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({email: email}) });
+        alert("Recipient Saved!"); emailInput.value = ""; 
     }
 
     function setTask(name, active) {
@@ -409,40 +397,25 @@
     function submitPin() {
         savedPin = document.getElementById('pin-input').value;
         document.getElementById('pin-modal').style.display = 'none';
-        
-        if (pendingAction.action === 'start_capture') {
-            openModal('config-modal');
-        } else {
-            executeControl(pendingAction.action, pendingAction.target, {});
-        }
+        if (pendingAction.action === 'start_capture') openModal('config-modal');
+        else executeControl(pendingAction.action, pendingAction.target, {});
     }
 
     async function submitConfig() {
-        const configData = {
-            pipeline: document.getElementById('cfg-pipeline').value,
-            freq: document.getElementById('cfg-freq').value,
-            samplerate: document.getElementById('cfg-samplerate').value,
-            gain: document.getElementById('cfg-gain').value
-        };
+        const configData = { pipeline: document.getElementById('cfg-pipeline').value, freq: document.getElementById('cfg-freq').value, samplerate: document.getElementById('cfg-samplerate').value, gain: document.getElementById('cfg-gain').value };
         closeModal('config-modal');
         executeControl('start_capture', 'capture', configData);
     }
 
     async function executeControl(action, target, configData) {
         let targetName = target === 'sync' ? 'sat-sync' : (target === 'align' ? 'alignment' : 'capture');
-        const res = await fetch('/api/control', {
-            method: 'POST', headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({action: action, target: targetName, pin: savedPin, config: configData})
-        });
+        const res = await fetch('/api/control', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action: action, target: targetName, pin: savedPin, config: configData}) });
         const d = await res.json();
         if(d.status === 'error') alert("Error: " + d.message);
         else setTimeout(updateMetrics, 500);
-        
-        pendingAction = null; 
-        savedPin = ""; 
+        pendingAction = null; savedPin = ""; 
     }
 
-    // --- CALENDAR ---
     function renderCalendar() {
         const container = document.getElementById('cal-container'); container.removeAttribute('style'); container.innerHTML = '';
         const title = document.getElementById('cal-title');
@@ -504,9 +477,80 @@
         }
     }
 
+    function renderFiles() {
+        const grid = document.getElementById('files-grid'); 
+        grid.innerHTML = '';
+        const start = page * 8;
+        const end = start + 8;
+        allFiles.slice(start, end).forEach(f => {
+            grid.innerHTML += `<div class="file-card" onclick="openImg('${f.name}')"><img src="/images/${f.name}"></div>`;
+        });
+        document.getElementById('page-num').innerText = page + 1;
+    }
+
+    function playContextTimelapse() {
+        const chan = prompt("Filter by Channel? (1, 2, 3, 4, 5, or FC. Leave blank for ALL)");
+        let files = allFiles;
+        if(chan) files = allFiles.filter(f => f.name.includes(`_${chan}_`) || f.name.includes(`_${chan}.`));
+        if(files.length === 0) return alert("No matching images found.");
+        
+        const speedInput = prompt("Playback speed? (Enter ms per frame. Example: 500 for normal, 200 for fast)", "500");
+        const speed = parseInt(speedInput) || 500;
+
+        files = files.reverse(); 
+        let i = 0; 
+        openModal('full-img-modal');
+        document.getElementById('stop-btn').style.display = 'flex';
+        
+        slideshowInt = setInterval(() => {
+            document.getElementById('modal-img').src = `/images/${files[i % files.length].name}`; 
+            i++;
+        }, speed);
+    }
+
+    function stopSlideshow(e) { 
+        if(e) e.stopPropagation(); 
+        clearInterval(slideshowInt); 
+        document.getElementById('stop-btn').style.display = 'none'; 
+    }
+
+    async function shareImg(e) { 
+        e.stopPropagation(); 
+        const url = document.getElementById('modal-img').src; 
+        const filename = url.split('/').pop() || "satellite_capture.png";
+
+        try { 
+            if (navigator.share) {
+                // Attempt to package the actual image file so iOS native Share Sheet loves it
+                try {
+                    const res = await fetch(url);
+                    const blob = await res.blob();
+                    const file = new File([blob], filename, { type: blob.type });
+                    
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        await navigator.share({ files: [file], title: 'Mission Control Capture' });
+                        return;
+                    }
+                } catch (fileErr) {
+                    console.log("File payload failed, falling back to link...", fileErr);
+                }
+                
+                // Fallback to basic link sharing if the blob trick fails
+                await navigator.share({ title: 'Mission Control Capture', url: url });
+            } else {
+                // Desktop fallback - direct download
+                const a = document.createElement('a'); 
+                a.href = url; 
+                a.download = filename; 
+                a.click();
+            }
+        } catch(err) {
+            console.log("Share cancelled or failed", err);
+        } 
+    }
+
     function jumpToDay(ts) { currentDate = new Date(ts); changeView('day'); }
     function changeView(v) { view = v; document.getElementById('view-select').value = v; renderCalendar(); }
-    
     function navTime(d) {
         if(view==='year') currentDate.setFullYear(currentDate.getFullYear()+d);
         if(view==='month') currentDate.setMonth(currentDate.getMonth()+d);
@@ -520,28 +564,15 @@
         const S = new Date(s); S.setHours(0,0,0,0); const E = new Date(e); E.setHours(23,59,59,999);
         return allFiles.filter(f => { const t = new Date(f.ts*1000); return t>=S && t<=E; });
     }
+    
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
     function closeModal(id) { document.getElementById(id).style.display = 'none'; stopSlideshow(); }
     function openImg(name) { openModal('full-img-modal'); document.getElementById('modal-img').src = `/images/${name}`; }
     async function viewLogs(s) { openModal('log-modal'); const res = await fetch(`/api/logs/${s}`); const d = await res.json(); document.getElementById('log-output').innerText = d.log; }
-    async function shareImg(e) { e.stopPropagation(); const url = document.getElementById('modal-img').src; try { if(navigator.share) await navigator.share({url: url}); else alert("Share not supported."); } catch(e){} }
-    function playContextTimelapse() { /* Same logic */ }
-    function stopSlideshow(e) { if(e)e.stopPropagation(); clearInterval(slideshowInt); }
-    function renderFiles() { /* Same logic */ }
-    function changePage(d) { if(page+d >= 0) { page+=d; renderFiles(); } }
+    function changePage(d) { if(page+d >= 0 && (page+d)*8 < allFiles.length) { page+=d; renderFiles(); } }
 
-    function setTimeFormat(val) { 
-        settings.use24h = val; 
-        localStorage.setItem('use24h', val); 
-        updateSettingsUI(); 
-        updateMetricsUI(); // Force immediate update of the time display
-    }
-    function setTempUnit(val) { 
-        settings.useF = val; 
-        localStorage.setItem('useF', val); 
-        updateSettingsUI(); 
-        updateMetricsUI(); 
-    }
+    function setTimeFormat(val) { settings.use24h = val; localStorage.setItem('use24h', val); updateSettingsUI(); updateMetricsUI(); }
+    function setTempUnit(val) { settings.useF = val; localStorage.setItem('useF', val); updateSettingsUI(); updateMetricsUI(); }
     
     function updateSettingsUI() {
         document.getElementById('btn-12h').className = !settings.use24h ? 'toggle-btn active' : 'toggle-btn';
@@ -552,9 +583,7 @@
 
     function copyLink() {
         const copyText = document.getElementById("tunnel-input");
-        copyText.select();
-        navigator.clipboard.writeText(copyText.value);
-        alert("Link Copied!");
+        copyText.select(); navigator.clipboard.writeText(copyText.value); alert("Link Copied!");
     }
 
     init();

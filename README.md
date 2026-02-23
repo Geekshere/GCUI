@@ -1,16 +1,17 @@
-# 🛰️ Electro-L5 Mission Control (Dubai Ground Station)
+# 🛰️ Mission Control: Dubai Satellite Ground Station
 
-A cyberpunk-themed web interface for controlling a Raspberry Pi Satellite Ground Station. Designed for tracking and decoding **Electro-L3/L5** (76°E) HRIT weather data.
+A high-performance, slate-themed web dashboard for controlling a Raspberry Pi Satellite Ground Station. Originally built for Elektro-L, now expanded for high-fidelity **FengYun-2H** and **Elektro-L3/L5** geostationary data reception.
 
 ![Status](https://img.shields.io/badge/Status-Mission%20Ready-success)
+![SNR](https://img.shields.io/badge/Peak%20SNR-7.18%20dB-blue)
 ![Platform](https://img.shields.io/badge/Platform-Raspberry%20Pi-red)
 
-## 🖥️ Features
-* **Real-Time Dashboard:** Monitor CPU temp, Disk usage, and Satellite Timers.
-* **Command Center:** Start/Stop `rtl_tcp` alignment and `SatDump` captures with one click.
-* **File Explorer:** View decoded satellite imagery directly in the browser.
-* **Auto-Sync:** Integration with `rclone` to push images to iCloud/Cloud Storage.
-* **Matrix CLI:** A stylized background terminal for that "War Room" aesthetic.
+## 🖥️ New Features
+* **Multi-Satellite Tracking:** Real-time acquisition timers for FengYun-2H, Elektro-L3, and Elektro-L5.
+* **Recursive Archive:** Deep-folder scanning logic that automatically organizes and displays images by capture date/time.
+* **Smart Timelapse:** Built-in playback engine with channel-specific filtering (e.g., FC, IR, VIS) and custom speed controls.
+* **Command Center:** Secure PIN-protected controls for `rtl_tcp` alignment, `SatDump` live decoding, and Cloud synchronization.
+* **Robust Sharing:** Adaptive "Share/Download" logic for seamless image export on iOS, macOS, and Desktop browsers.
 
 ## 🚀 Installation
 
@@ -24,16 +25,17 @@ A cyberpunk-themed web interface for controlling a Raspberry Pi Satellite Ground
     ```bash
     python3 -m venv venv
     source venv/bin/activate
-    pip install -r requirements.txt
+    pip install flask
     ```
 
 3.  **Run Mission Control**
     ```bash
     python app.py
     ```
-    *Access via: http://[YOUR_PI_IP]:5000*
+    *Access via: http://[YOUR_PI_IP]:5000 or your Cloudflare Tunnel URL.*
 
 ## 🛠️ Configuration
-Edit `app.py` to point to your specific `SatDump` output directory:
+The system is optimized for the following directory structure:
 ```python
 BASE_DIR = os.path.expanduser("~/SatDump/build/elektro_l3_output")
+IMAGE_DIR = os.path.join(BASE_DIR, "IMAGE/")
