@@ -128,7 +128,7 @@ def get_data():
     def check(name):
         try:
             return subprocess.run(["tmux", "has-session", "-t", name], 
-                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
         except: return False
         
     def get_tunnel_url():
@@ -162,16 +162,18 @@ def get_files():
     if not os.path.exists(IMAGE_DIR): return jsonify([])
     files = []
     try:
-        all_f = sorted(os.listdir(IMAGE_DIR), key=lambda x: os.path.getmtime(os.path.join(IMAGE_DIR, x)), reverse=True)
-        for f in all_f:
-            if f.endswith(('.png', '.jpg', '.jpeg')):
-                path = os.path.join(IMAGE_DIR, f)
-                stat = os.stat(path)
-                files.append({
-                    "name": f,
-                    "ts": stat.st_mtime,
-                    "size_mb": round(stat.st_size / (1024*1024), 2)
-                })
+        for root, dirs, filenames in os.walk(IMAGE_DIR):
+            for f in filenames:
+                if f.endswith(('.png', '.jpg', '.jpeg')):
+                    full_path = os.path.join(root, f)
+                    rel_path = os.path.relpath(full_path, IMAGE_DIR)
+                    stat = os.stat(full_path)
+                    files.append({
+                        "name": rel_path,
+                        "ts": stat.st_mtime,
+                        "size_mb": round(stat.st_size / (1024*1024), 2)
+                    })
+        files.sort(key=lambda x: x['ts'], reverse=True)
     except: pass
     return jsonify(files)
 
@@ -221,7 +223,8 @@ def get_logs(session):
     except: return jsonify({"log": "Error reading logs"})
 
 @app.route('/images/<path:filename>')
-def serve_image(filename): return send_from_directory(IMAGE_DIR, filename)
+def serve_image(filename): 
+    return send_from_directory(IMAGE_DIR, filename)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True, use_reloader=False)
