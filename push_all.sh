@@ -1,4 +1,4 @@
-#!/bin/bash
+k#!/bin/bash
 
 # Navigate to the project root
 cd ~/mission_control
@@ -8,9 +8,6 @@ git add .
 
 # Commit with a timestamp
 git commit -m "Station Update: $(date +'%Y-%m-%d %H:%M:%S')"
-
-# Set the authenticated URL using your new PAT
-git remote set-url origin https://Geekshere:ghp_2X1k70MiЕZdtntR7qymQDmkpFQ7K0F3S1kQJ@github.com/Geekshere/SatDump-WebGUI.git
 
 # Final Push
 git push origin main
