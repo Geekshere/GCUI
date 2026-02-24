@@ -5398,3 +5398,5 @@
 {"level":"info","event":0,"connection":"863cd947-39c4-47a0-b505-0fd4218c6db4","connIndex":0,"location":"sin02","ip":"198.41.200.43","protocol":"quic","time":"2026-02-24T16:11:54Z","message":"Registered tunnel connection"}
 {"level":"error","event":1,"connIndex":0,"originService":"http://localhost:5000","ingressRule":0,"error":"stream 1153 canceled by remote with error code 0","time":"2026-02-24T16:45:34Z"}
 {"level":"error","event":0,"ip":"198.41.200.43","connIndex":0,"error":"stream 1153 canceled by remote with error code 0","type":"http","dest":"https://prix-activity-oven-char.trycloudflare.com/images/2026-02-24_14-25/FY-2x_FC_20260224T142600Z.png","time":"2026-02-24T16:45:34Z","message":"Request failed"}
+{"level":"error","event":1,"connIndex":0,"originService":"http://localhost:5000","ingressRule":0,"error":"Incoming request ended abruptly: context canceled","time":"2026-02-24T17:20:50Z"}
+{"level":"error","event":0,"ip":"198.41.200.43","connIndex":0,"error":"Incoming request ended abruptly: context canceled","type":"http","dest":"https://prix-activity-oven-char.trycloudflare.com/api/data","time":"2026-02-24T17:20:50Z","message":"Request failed"}

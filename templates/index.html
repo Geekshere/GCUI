@@ -470,19 +470,39 @@
             }
         }
         else if(view === 'day') {
-            title.innerText = currentDate.toDateString();
-            container.style.display='block';
-            const files = getFilesForRange(currentDate, currentDate);
-            if(files.length === 0) container.innerHTML = '<div style="color:var(--sub); text-align:center;">No Images</div>';
-            files.forEach(f => {
+        title.innerText = currentDate.toDateString();
+        container.style.display='block';
+        const files = getFilesForRange(currentDate, currentDate);
+
+        window.dayViewLimit = 15; 
+        window.dayViewFiles = files;
+
+        window.renderDayView = function() {
+            container.innerHTML = ''; 
+            if(window.dayViewFiles.length === 0) {
+                container.innerHTML = '<div style="color:var(--sub); text-align:center;">No Images</div>';
+                return;
+            }
+            
+            const toShow = window.dayViewFiles.slice(0, window.dayViewLimit);
+
+            toShow.forEach(f => {
                 container.innerHTML += `<div style="padding:10px; background:rgba(255,255,255,0.03); margin-bottom:5px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="openImg('${f.name}')">
                     <img src="/thumb/${f.name}" loading="lazy" style="width:60px; height:40px; object-fit:cover;">
                     <div>${new Date(f.ts*1000).toLocaleTimeString()}</div>
                 </div>`;
             });
-        }
-    }
 
+            if (window.dayViewLimit < window.dayViewFiles.length) {
+                container.innerHTML += `<div style="padding:10px; background:rgba(255,255,255,0.08); margin-bottom:5px; text-align:center; cursor:pointer; border-radius:4px;" onclick="window.dayViewLimit += 15; window.renderDayView();">
+                    Load More (${window.dayViewFiles.length - window.dayViewLimit} remaining)
+                </div>`;
+            }
+        };
+
+        window.renderDayView();
+    }
+}
     function renderFiles() {
         const grid = document.getElementById('files-grid'); 
         grid.innerHTML = '';
