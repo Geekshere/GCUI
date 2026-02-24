@@ -160,7 +160,7 @@
                 <select id="view-select" class="view-select" onchange="changeView(this.value)">
                     <option value="year">Year</option><option value="month" selected>Month</option><option value="week">Week</option><option value="day">Day</option>
                 </select>
-                <button style="margin-left:10px; border-color:var(--accent); color:var(--accent)" onclick="playContextTimelapse()">▶ Play</button>
+                <button style="margin-left:10px; border-color:var(--accent); color:var(--accent)" onclick="downloadTimelapse()">🎬 Timelapse</button>
             </div>
         </div>
         <div id="cal-container"></div>
@@ -273,14 +273,13 @@
         <img id="modal-img" src="">
         <div class="action-bar">
             <div class="icon-btn" onclick="shareImg(event)">⏍</div>
-            <div class="icon-btn" id="stop-btn" onclick="stopSlideshow(event)" style="border-color:var(--danger); color:var(--danger); display:none;">⏹</div>
         </div>
     </div>
 </div>
 
 <script>
     let allFiles = []; let currentDate = new Date(); let view = 'month'; let page = 0;
-    let slideshowInt = null; let pendingAction = null; let savedPin = "";
+    let pendingAction = null; let savedPin = "";
     let lastSystemData = null;
     let settings = { use24h: localStorage.getItem('use24h') !== 'false', useF: localStorage.getItem('useF') === 'true' };
 
@@ -300,16 +299,25 @@
     }
 
     async function init() {
-        renderCalendar(); updateSettingsUI(); loadPreset(); 
-        const fRes = await fetch('/api/files'); allFiles = await fRes.json();
-        if(allFiles.length > 0) {
-            document.getElementById('hero-section').style.display = 'block';
-            document.getElementById('hero-section').style.backgroundImage = `url('/images/${allFiles[0].name}')`;
-            document.getElementById('hero-date').innerText = new Date(allFiles[0].ts * 1000).toLocaleString();
-        }
-        renderCalendar(); renderFiles(); updateMetrics();
-        setInterval(updateMetrics, 5000);
+        document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour12: !settings.use24h});
         setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour12: !settings.use24h}); }, 1000);
+        
+        renderCalendar(); updateSettingsUI(); loadPreset(); 
+        
+        updateMetrics();
+        setInterval(updateMetrics, 5000);
+
+        try {
+            const fRes = await fetch('/api/files'); 
+            allFiles = await fRes.json();
+            if(allFiles.length > 0) {
+                document.getElementById('hero-section').style.display = 'block';
+                document.getElementById('hero-section').style.backgroundImage = `url('/thumb/${allFiles[0].name}')`;
+                document.getElementById('hero-date').innerText = new Date(allFiles[0].ts * 1000).toLocaleString();
+            }
+            renderCalendar(); 
+            renderFiles(); 
+        } catch(e) { console.error("Files failed to load: ", e); }
     }
 
     async function updateMetrics() {
@@ -318,9 +326,7 @@
             if(!res.ok) return;
             lastSystemData = await res.json();
             updateMetricsUI();
-        } catch (e) {
-            console.error("Fetch failed", e);
-        }
+        } catch (e) {}
     }
 
     function updateMetricsUI() {
@@ -470,7 +476,7 @@
             if(files.length === 0) container.innerHTML = '<div style="color:var(--sub); text-align:center;">No Images</div>';
             files.forEach(f => {
                 container.innerHTML += `<div style="padding:10px; background:rgba(255,255,255,0.03); margin-bottom:5px; display:flex; align-items:center; gap:10px; cursor:pointer;" onclick="openImg('${f.name}')">
-                    <img src="/images/${f.name}" style="width:60px; height:40px; object-fit:cover;">
+                    <img src="/thumb/${f.name}" loading="lazy" style="width:60px; height:40px; object-fit:cover;">
                     <div>${new Date(f.ts*1000).toLocaleTimeString()}</div>
                 </div>`;
             });
@@ -483,37 +489,144 @@
         const start = page * 8;
         const end = start + 8;
         allFiles.slice(start, end).forEach(f => {
-            grid.innerHTML += `<div class="file-card" onclick="openImg('${f.name}')"><img src="/images/${f.name}"></div>`;
+            grid.innerHTML += `<div class="file-card" onclick="openImg('${f.name}')"><img src="/thumb/${f.name}" loading="lazy"></div>`;
         });
         document.getElementById('page-num').innerText = page + 1;
     }
 
-    function playContextTimelapse() {
+    // THE NEW CLIENT-SIDE VIDEO GENERATOR
+// THE NEW CLIENT-SIDE VIDEO GENERATOR
+    async function downloadTimelapse() {
+        let sDate = new Date(currentDate);
+        let eDate = new Date(currentDate);
+
+        if (view === 'day') {
+            // Keep exactly as currentDate
+        } else if (view === 'week') {
+            sDate.setDate(currentDate.getDate() - currentDate.getDay());
+            eDate = new Date(sDate);
+            eDate.setDate(sDate.getDate() + 6);
+        } else if (view === 'month') {
+            sDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+            eDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+        } else if (view === 'year') {
+            sDate = new Date(currentDate.getFullYear(), 0, 1);
+            eDate = new Date(currentDate.getFullYear(), 11, 31);
+        }
+
+        let files = getFilesForRange(sDate, eDate);
+        if(files.length === 0) return alert("No images found for this time range.");
+
         const chan = prompt("Filter by Channel? (1, 2, 3, 4, 5, or FC. Leave blank for ALL)");
-        let files = allFiles;
-        if(chan) files = allFiles.filter(f => f.name.includes(`_${chan}_`) || f.name.includes(`_${chan}.`));
-        if(files.length === 0) return alert("No matching images found.");
+        if(chan) files = files.filter(f => f.name.includes(`_${chan}_`) || f.name.includes(`_${chan}.`));
+        if(files.length === 0) return alert("No matching images found for that channel in this time range.");
         
-        const speedInput = prompt("Playback speed? (Enter ms per frame. Example: 500 for normal, 200 for fast)", "500");
-        const speed = parseInt(speedInput) || 500;
+        const fpsInput = prompt("Enter Video Frame Rate (FPS). \nExample: 5 for normal, 10 for fast.", "5");
+        const fps = parseInt(fpsInput) || 5;
+        const msPerFrame = 1000 / fps;
 
         files = files.reverse(); 
-        let i = 0; 
-        openModal('full-img-modal');
-        document.getElementById('stop-btn').style.display = 'flex';
         
-        slideshowInt = setInterval(() => {
-            document.getElementById('modal-img').src = `/images/${files[i % files.length].name}`; 
-            i++;
-        }, speed);
-    }
+        // Setup Modal UI for Video Rendering
+        openModal('full-img-modal');
+        document.getElementById('modal-img').style.display = 'none';
+        document.querySelector('.action-bar').style.display = 'none';
+        
+        let statusTxt = document.getElementById('vid-status');
+        if(!statusTxt) {
+            statusTxt = document.createElement('div');
+            statusTxt.id = 'vid-status';
+            statusTxt.style.color = 'white';
+            statusTxt.style.fontSize = '1.2rem';
+            statusTxt.style.fontFamily = 'JetBrains Mono';
+            statusTxt.style.marginTop = '40px';
+            document.querySelector('#full-img-modal .modal-content').appendChild(statusTxt);
+        }
+        statusTxt.style.display = 'block';
+        statusTxt.innerText = "Starting Video Engine...";
 
-    function stopSlideshow(e) { 
-        if(e) e.stopPropagation(); 
-        clearInterval(slideshowInt); 
-        document.getElementById('stop-btn').style.display = 'none'; 
-    }
+        try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
 
+            // Pre-load first image to get correct dimensions
+            const firstImg = new Image();
+            await new Promise((resolve) => { 
+                firstImg.onload = resolve; 
+                firstImg.src = `/thumb/${files[0].name}`; 
+            });
+            canvas.width = firstImg.width;
+            canvas.height = firstImg.height;
+
+            // --- THE NEW FORMAT LOGIC ---
+            // Aggressively prioritize MP4 (H.264)
+            let mimeType = 'video/mp4';
+            let ext = 'mp4';
+            
+            // If the browser flat-out refuses MP4, fallback to WebM
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm';
+                ext = 'webm';
+            }
+            // ----------------------------
+
+            const stream = canvas.captureStream(fps);
+            const recorder = new MediaRecorder(stream, { mimeType: mimeType });
+            const chunks = [];
+            
+            recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+            let recordingDone = new Promise(resolve => recorder.onstop = resolve);
+            
+            recorder.start();
+
+            // Draw frames sequentially
+            for(let i = 0; i < files.length; i++) {
+                // Allow user to cancel by clicking outside the modal
+                if(document.getElementById('full-img-modal').style.display === 'none') {
+                    recorder.stop();
+                    return; 
+                }
+
+                statusTxt.innerText = `Rendering Frame ${i+1} of ${files.length}...\nDo not close this window.`;
+                
+                const img = new Image();
+                await new Promise((resolve) => { 
+                    img.onload = resolve; 
+                    img.onerror = resolve; // skip broken files safely
+                    img.src = `/thumb/${files[i].name}`; 
+                });
+                
+                ctx.fillStyle = "black";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                // Pause to let MediaRecorder capture the frame at the requested FPS
+                await new Promise(resolve => setTimeout(resolve, msPerFrame)); 
+            }
+
+            recorder.stop();
+            statusTxt.innerText = "Finalizing Video File...";
+            await recordingDone;
+            
+            const blob = new Blob(chunks, { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            
+            // Trigger auto-download
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `MissionControl_Timelapse.${ext}`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            statusTxt.innerText = "Download Complete!";
+        } catch (err) {
+            statusTxt.innerText = "Error generating video.";
+            console.error(err);
+        }
+
+        // Close the window after 2 seconds
+        setTimeout(() => closeModal('full-img-modal'), 2000);
+    }
     async function shareImg(e) { 
         e.stopPropagation(); 
         const url = document.getElementById('modal-img').src; 
@@ -521,7 +634,6 @@
 
         try { 
             if (navigator.share) {
-                // Attempt to package the actual image file so iOS native Share Sheet loves it
                 try {
                     const res = await fetch(url);
                     const blob = await res.blob();
@@ -534,11 +646,8 @@
                 } catch (fileErr) {
                     console.log("File payload failed, falling back to link...", fileErr);
                 }
-                
-                // Fallback to basic link sharing if the blob trick fails
                 await navigator.share({ title: 'Mission Control Capture', url: url });
             } else {
-                // Desktop fallback - direct download
                 const a = document.createElement('a'); 
                 a.href = url; 
                 a.download = filename; 
@@ -566,8 +675,24 @@
     }
     
     function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; stopSlideshow(); }
-    function openImg(name) { openModal('full-img-modal'); document.getElementById('modal-img').src = `/images/${name}`; }
+    
+    function closeModal(id) { 
+        document.getElementById(id).style.display = 'none'; 
+        if(id === 'full-img-modal') {
+            document.getElementById('modal-img').src = ''; 
+            // Reset the layout in case it was used for a video export
+            document.getElementById('modal-img').style.display = 'inline-block';
+            document.querySelector('.action-bar').style.display = 'flex';
+            let statusTxt = document.getElementById('vid-status');
+            if(statusTxt) statusTxt.style.display = 'none';
+        }
+    }
+    
+    function openImg(name) { 
+        openModal('full-img-modal'); 
+        document.getElementById('modal-img').src = `/images/${name}`; 
+    }
+    
     async function viewLogs(s) { openModal('log-modal'); const res = await fetch(`/api/logs/${s}`); const d = await res.json(); document.getElementById('log-output').innerText = d.log; }
     function changePage(d) { if(page+d >= 0 && (page+d)*8 < allFiles.length) { page+=d; renderFiles(); } }
 
