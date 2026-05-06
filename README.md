@@ -1,4 +1,4 @@
-Quick edit: since uploading this i have improced it alot, but have not had the time to add it to github, so if anyone is interested let me know and i can update it
+Quick edit: since uploading this i have improved it alot, but have not had the time to add it to github, so if anyone is interested let me know and i can update it
 
 
 # 🛰️ Mission Control: Dubai Satellite Ground Station
