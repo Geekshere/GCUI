@@ -1,3 +1,6 @@
+Quick edit: since uploading this i have improced it alot, but have not had the time to add it to github, so if anyone is interested let me know and i can update it
+
+
 # 🛰️ Mission Control: Dubai Satellite Ground Station
 
 A high-performance, slate-themed web dashboard for controlling a Raspberry Pi Satellite Ground Station. Originally built for Elektro-L, now expanded for high-fidelity **FengYun-2H** and **Elektro-L3/L5** geostationary data reception.
