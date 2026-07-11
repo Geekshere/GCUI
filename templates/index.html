@@ -50,6 +50,8 @@ header{height:60px;display:flex;align-items:center;justify-content:space-between
 nav{height:46px;display:flex;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:60px;z-index:40}
 .nl{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;color:var(--sub);font-size:.77rem;font-weight:500;transition:all .2s;border-bottom:2px solid transparent;border-top:none;border-left:none;border-right:none;background:none;font-family:inherit;cursor:pointer;user-select:none}
 .nl svg{width:14px;height:14px;flex-shrink:0;pointer-events:none}
+.nl.admin-only{display:none}
+.owner-mode .nl.admin-only{display:flex}
 .nl.active{color:var(--accent);border-bottom-color:var(--accent)}
 .nl:hover:not(.active){color:var(--text)}
 /* PAGE */
