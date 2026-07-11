@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  mission-control:
+    build: .
+    container_name: gcui
+    ports:
+      - "8080:8080"
+    volumes:
+      # Change this to wherever you want images/thumbs/the DB stored on your host
+      - ./data:/app/data
+    env_file:
+      - .env
+    restart: always
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s

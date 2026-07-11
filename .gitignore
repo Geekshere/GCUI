@@ -1,4 +1,17 @@
-venv/
+# Secrets
+.env
+
+# Runtime data (images, thumbnails, avatars, sqlite db, caches)
+data/
+
+# Python
 __pycache__/
 *.pyc
+.venv/
+venv/
+
+# OS / editor junk
 .DS_Store
+Thumbs.db
+desktop.ini
+#recycle/
