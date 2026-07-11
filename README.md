@@ -3,8 +3,7 @@
 A Flask-based web dashboard for a homebrew weather satellite ground station.
 GCUI shows the live status of a Raspberry Pi based SDR capture rig, browses
 and serves captured satellite imagery (with thumbnails), and adds a small
-community layer on top: accounts, comments, likes, favorites, announcements,
-and DMs.
+community layer on top: comments, likes, favorites, announcements, etc.
 
 This was built for my own weather satellite ground station setup (RTL-SDR
 on a Raspberry Pi, receiving imagery off my roof). It took a good amount of
