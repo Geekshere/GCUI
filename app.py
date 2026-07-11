@@ -304,6 +304,12 @@ def init_db():
                 'INSERT INTO users (email,username,password_hash,salt,is_owner,created_ts) VALUES (?,?,?,?,1,?)',
                 (OWNER_EMAIL, OWNER_USERNAME, h, s, time.time())
             )
+        else:
+            # Keep the owner's username in sync with OWNER_USERNAME even on
+            # existing databases (e.g. after changing the env var).
+            c.execute('UPDATE users SET username=? WHERE email=? AND username!=?',
+                      (OWNER_USERNAME, OWNER_EMAIL, OWNER_USERNAME))
+            )
         # Seed default satellite configs if empty
         if not c.execute('SELECT 1 FROM satellite_configs').fetchone():
             c.executemany('INSERT OR IGNORE INTO satellite_configs (sat_key,name,file_pattern) VALUES (?,?,?)',[
