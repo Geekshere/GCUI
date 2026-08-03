@@ -1,3 +1,5 @@
+Please use the version on codeberg, this is now outdated.
+
 # GCUI - Ground Control User Interface
 
 A Flask-based web dashboard for a homebrew weather satellite ground station.
